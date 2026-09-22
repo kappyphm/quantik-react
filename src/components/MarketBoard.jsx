@@ -52,16 +52,16 @@ export default function MarketBoard({ apiReady = false }) {
   const rows = useMemo(() => stocks.map(stock => ({ ...stock, ...change(demoBars(stock.symbol, stock.score)) })), []);
   const visible = apiReady ? (remote?.items || []).map(item => ({ ...item, current: item.price, difference: item.change, percent: item.change_pct })) : rows.slice((page - 1) * pageSize, page * pageSize);
   const total = apiReady ? remote?.total || 0 : rows.length;
-  const advances = apiReady ? remote?.breadth?.advances ?? 0 : rows.filter(row => row.difference > 0).length;
-  const declines = apiReady ? remote?.breadth?.declines ?? 0 : rows.filter(row => row.difference < 0).length;
+  const advances = apiReady ? remote?.breadth?.advances : rows.filter(row => row.difference > 0).length;
+  const declines = apiReady ? remote?.breadth?.declines : rows.filter(row => row.difference < 0).length;
   return <section className="market-board" aria-label="Bảng điện thị trường minh họa">
-    <div className="market-board-head"><div><span className="market-board-kicker">THỊ TRƯỜNG VIỆT NAM / TỔNG QUAN</span><strong>Bảng điện</strong></div><span className="market-demo-tag">{apiReady ? `${remote?.source === 'scan_snapshot' ? 'SNAPSHOT SAU PHIÊN' : remote?.source || 'ĐANG TẢI'} · ${remote?.as_of || '—'}` : 'DỮ LIỆU MẪU · 21/09/2026'}</span></div>
+    <div className="market-board-head"><div><span className="market-board-kicker">THỊ TRƯỜNG VIỆT NAM / TỔNG QUAN</span><strong>Bảng điện</strong></div><span className="market-demo-tag">{apiReady ? `${remote?.source === 'vnstock_price_board' ? 'VNSTOCK · BẢNG GIÁ' : 'ĐANG TẢI'} · ${remote?.as_of || '—'}` : 'DỮ LIỆU MẪU · 21/09/2026'}</span></div>
     {apiReady && error ? <div className="market-api-empty">{error}</div> : <>
     {index ? <div className="market-index"><div className="market-index-stat"><span>VN-INDEX {apiReady ? '· EOD' : '· MINH HỌA'}</span><strong>{fmt(index.current * scale)}</strong><b className={index.difference >= 0 ? 'positive' : 'negative'}>{index.difference >= 0 ? '+' : ''}{fmt(index.difference * scale)} ({index.percent >= 0 ? '+' : ''}{fmt(index.percent)}%)</b></div><IndexChart bars={indexBars} scale={scale} isDemo={!apiReady || remote?.run_id?.startsWith('DEMO')} /></div> : <div className="market-api-empty">{remote ? 'Chưa có dữ liệu VN-Index trong bản quét.' : 'Đang tải dữ liệu VN-Index…'}</div>}
-    <div className="market-breadth"><span><i className="up-dot"/> Tăng <strong>{advances}</strong></span><span><i className="down-dot"/> Giảm <strong>{declines}</strong></span><span>{total} mã · HOSE / HNX / UPCoM</span></div>
+    <div className="market-breadth">{advances != null && <span><i className="up-dot"/> Tăng <strong>{advances}</strong></span>}{declines != null && <span><i className="down-dot"/> Giảm <strong>{declines}</strong></span>}<span>{total} mã · HOSE / HNX / UPCoM</span></div>
     <div className="market-board-scroll"><table className="market-board-table"><thead><tr><th>MÃ / SÀN</th><th>GIÁ</th><th>+/−</th><th>%</th><th>KL</th></tr></thead><tbody>{visible.map(row => <tr key={row.symbol}><td><strong>{row.symbol}</strong><small>{row.exchange}</small></td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{fmt(row.current)}</td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{row.difference >= 0 ? '+' : ''}{fmt(row.difference)}</td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{row.percent >= 0 ? '+' : ''}{fmt(row.percent)}%</td><td>{fmt(row.volume, 0)}</td></tr>)}</tbody></table></div>
     <Pagination total={total} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={size => { setPageSize(size); setPage(1); }} />
     </>}
-    <div className="market-board-foot">{apiReady ? remote?.run_id?.startsWith('DEMO') ? 'Snapshot dữ liệu mẫu từ BE · Không phải dữ liệu giao dịch trực tiếp' : 'Dữ liệu cuối phiên từ bản quét đã công bố · Không phải giá realtime' : 'Giá, chỉ số và khối lượng giả lập cho PoC · Không phải dữ liệu giao dịch trực tiếp'}</div>
+    <div className="market-board-foot">{apiReady ? 'Giá từ bảng giá Vnstock · thời điểm cập nhật theo nhà cung cấp' : 'Giá, chỉ số và khối lượng giả lập cho PoC · Không phải dữ liệu giao dịch trực tiếp'}</div>
   </section>;
 }

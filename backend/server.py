@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from runtime_env import load_project_env
 from store import connect, create_scan, init_db, loads, new_job, new_session, session_exists, now
+from market import overview as live_market_overview
 
 load_project_env()
 app = FastAPI(title="QuanTik API", version="1.0.0")
@@ -194,29 +195,11 @@ def scan_detail(symbol: str):
 def market_overview(page: int = 1, page_size: int = 5):
     if page < 1 or page_size not in (5, 10, 20):
         raise HTTPException(422, "page/page_size không hợp lệ")
-    with connect() as db:
-        run = latest_run(db)
-        rows = db.execute("SELECT summary_json,ohlcv_json FROM scan_results WHERE run_id=? ORDER BY symbol",
-                          (run["id"],)).fetchall()
-    items = []
-    for row in rows:
-        bars = loads(row["ohlcv_json"], [])
-        if len(bars) < 2:
-            continue
-        summary = loads(row["summary_json"], {})
-        close, previous = bars[-1]["close"], bars[-2]["close"]
-        items.append({"symbol": summary["symbol"], "name": summary.get("name"),
-                      "exchange": summary.get("exchange"), "price": close,
-                      "change": close - previous, "change_pct": (close / previous - 1) * 100,
-                      "volume": bars[-1]["volume"]})
-    index_bars = loads(run["index_json"], [])
-    return {"source": "scan_snapshot", "as_of": run["data_as_of"], "delay_minutes": None,
-            "market_status": "EOD", "run_id": run["id"], "total": len(items),
-            "page": page, "page_size": page_size,
-            "breadth": {"advances": sum(item["change"] > 0 for item in items),
-                        "declines": sum(item["change"] < 0 for item in items)},
-            "index_bars": index_bars,
-            "items": items[(page - 1) * page_size:page * page_size]}
+    try:
+        return live_market_overview(page, page_size)
+    except Exception as exc:
+        raise HTTPException(503, detail={"code": "MARKET_SOURCE_UNAVAILABLE",
+                                         "message": str(exc)}) from exc
 
 
 class QuantRequest(BaseModel):
