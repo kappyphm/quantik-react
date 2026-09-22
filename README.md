@@ -107,3 +107,5 @@ OpenAPI tại `http://localhost:8000/docs`.
 
 Kiểm tra frontend: `pnpm build`. Kiểm tra API/queue: `cd backend && .venv\Scripts\python.exe -m unittest discover -s tests -v`. Kiểm tra nguồn thật trên database tạm: `cd backend && .venv\Scripts\python.exe tests\live_smoke.py`.
 
+Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy build frontend, toàn bộ unittest backend và `docker compose config` trên mọi push vào `main`/`codex/**` và mọi pull request vào `main`. Nhánh triển khai đi qua `codex/live-data`; chỉ gộp vào `main` sau khi lượt quét thật, kiểm thử giao diện và các job CI đều đạt.
+
