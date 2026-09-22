@@ -83,6 +83,23 @@ def resolve_universe(symbols=None, provider=None):
     return universe, exchanges
 
 
+def resolve_company_names(universe, provider=None):
+    """Resolve display names without allowing reference data to alter the universe."""
+    try:
+        if provider is None:
+            from vnstock import Listing
+            provider = Listing()
+        rows = provider.all_symbols()
+        if rows is None or not {"symbol", "organ_name"}.issubset(rows.columns):
+            return {}
+        allowed = set(universe)
+        return {str(row.symbol).upper(): str(row.organ_name).strip()
+                for row in rows.itertuples(index=False)
+                if str(row.symbol).upper() in allowed and str(row.organ_name).strip()}
+    except Exception:
+        return {}
+
+
 def align_market_cutoff(data):
     """Align daily equity bars to the date most commonly available across the universe.
 
@@ -135,6 +152,7 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
         raise RuntimeError("Nguồn dữ liệu không trả danh sách mã; không công bố run rỗng")
     if universe_ready:
         universe_ready(len(universe))
+    company_names = resolve_company_names(universe)
     bridge = ScreenerBridge()
     data, failed, screening = {}, {}, {}
     if checkpoint_dir is not None:
@@ -232,7 +250,8 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
         status = analysis_status(error)
         action = str(row.get("Action") or "UNKNOWN") if status == "completed" else None
         summary = {
-            "symbol": symbol, "name": symbol, "exchange": exchanges.get(symbol, "UNKNOWN"),
+            "symbol": symbol, "name": company_names.get(symbol, symbol),
+            "exchange": exchanges.get(symbol, "UNKNOWN"),
             "recommendation": (display.get("Khuyến nghị") or action) if status == "completed" else None,
             "gate_pass": bool(row.get("GatePass", False)) if status == "completed" else False,
             "gate_explanation": (display.get("Giải thích điều kiện") or "") if status == "completed" else error,

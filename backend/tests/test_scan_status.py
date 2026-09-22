@@ -5,7 +5,8 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from engine import align_index_cutoff, align_market_cutoff, analysis_status, resolve_universe
+from engine import (align_index_cutoff, align_market_cutoff, analysis_status,
+                    resolve_company_names, resolve_universe)
 from worker import validate_scan_result
 
 
@@ -17,6 +18,13 @@ class ScanStatusTest(unittest.TestCase):
         universe, exchanges = resolve_universe(provider=Provider())
         self.assertEqual(universe, ['FPT', 'DUP', 'IDC', 'ABB'])
         self.assertEqual(exchanges, {'FPT': 'HOSE', 'DUP': 'HOSE', 'IDC': 'HNX', 'ABB': 'UPCOM'})
+
+    def test_company_names_only_enrich_the_resolved_universe(self):
+        class Listing:
+            def all_symbols(self):
+                return pd.DataFrame([{'symbol': 'FPT', 'organ_name': 'CTCP FPT'},
+                                     {'symbol': 'OTHER', 'organ_name': 'Không thuộc universe'}])
+        self.assertEqual(resolve_company_names(['FPT'], Listing()), {'FPT': 'CTCP FPT'})
 
     def test_liquidity_rejection_is_not_processing_failure(self):
         self.assertEqual(analysis_status(None), 'completed')
