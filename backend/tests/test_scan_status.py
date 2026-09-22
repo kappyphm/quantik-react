@@ -26,6 +26,12 @@ class ScanStatusTest(unittest.TestCase):
                                      {'symbol': 'OTHER', 'organ_name': 'Không thuộc universe'}])
         self.assertEqual(resolve_company_names(['FPT'], Listing()), {'FPT': 'CTCP FPT'})
 
+    def test_company_name_lookup_never_aborts_a_scan(self):
+        class RateLimitedListing:
+            def all_symbols(self):
+                raise SystemExit('provider quota')
+        self.assertEqual(resolve_company_names(['FPT'], RateLimitedListing()), {})
+
     def test_liquidity_rejection_is_not_processing_failure(self):
         self.assertEqual(analysis_status(None), 'completed')
         self.assertEqual(analysis_status('Liquidity gate failed'), 'screened_out')

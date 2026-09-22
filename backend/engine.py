@@ -96,7 +96,7 @@ def resolve_company_names(universe, provider=None):
         return {str(row.symbol).upper(): str(row.organ_name).strip()
                 for row in rows.itertuples(index=False)
                 if str(row.symbol).upper() in allowed and str(row.organ_name).strip()}
-    except Exception:
+    except (Exception, SystemExit):
         return {}
 
 
