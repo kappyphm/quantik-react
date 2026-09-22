@@ -4,6 +4,8 @@ Frontend React/Vite, FastAPI, SQLite, worker và scheduler cho luồng bảng đ
 
 `quant-core/` được giữ nguyên làm mã gốc đối chiếu. Bản sao dùng bởi backend nằm tại `backend/quant_engine/`; hash gốc trong `docs/quant-core-baseline.sha256`. Bản sao `quant.py` có thay đổi ở lớp kết nối dữ liệu để dùng API `vnstock` 4 và yêu cầu 500 bar; logic phân tích gốc giữ nguyên.
 
+Danh sách thay đổi có chủ đích và cách kiểm tra bất biến nằm tại [docs/QUANT_ENGINE_CHANGES.md](docs/QUANT_ENGINE_CHANGES.md).
+
 ## Chạy với dữ liệu Vnstock
 
 Các lệnh sau dành cho **Windows Command Prompt (CMD)**, chạy từ thư mục gốc `D:\20_Workspace\1_software\quantik-react`. Đã kiểm thử với Python 3.13, Node và pnpm. Nếu `backend\.venv` đã tồn tại thì **bỏ qua việc tạo lại**; không chạy `python -m venv` khi API/worker đang dùng môi trường đó.
