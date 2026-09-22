@@ -200,4 +200,4 @@ def quant_one(symbol, progress, output_dir: Path, include_backtest=True):
     progress("visual", 89, "Đang tạo biểu đồ QUANT")
     visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
                                      report=report, price_data=data[symbol])
-    return presentation, visuals
+    return presentation, visuals, bars_from_frame(data[symbol])

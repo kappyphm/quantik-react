@@ -78,7 +78,7 @@ OpenAPI tại `http://localhost:8000/docs`.
 - Trước công bố, worker kiểm tra độ phủ (`QUANTIK_MIN_COVERAGE`, mặc định 80%), tỷ lệ mã cùng ngày dữ liệu với VN-Index (`QUANTIK_MIN_FRESH_COVERAGE`, mặc định 75%) và tuổi dữ liệu (`QUANTIK_MAX_DATA_AGE_DAYS`, mặc định 7 ngày). `POST_CLOSE` yêu cầu dữ liệu đúng ngày slot; `PRE_OPEN` yêu cầu dữ liệu của phiên trước.
 - Đã kiểm thử luồng FPT thật: quét, tạo job qua API, chạy quant-core, báo cáo và tải đủ 7 ảnh. Chưa xác nhận một đợt toàn sàn đủ 1.430 mã hoàn tất và đạt ngưỡng công bố trên máy hiện tại. Bảng điện là dữ liệu theo thời điểm nhà cung cấp trả về, không cam kết realtime.
 - Backend hiện dùng SQLite và một worker, phù hợp tích hợp nội bộ. Chưa có tài khoản đăng nhập, phân quyền quản trị nhiều người, retry phân tán, hay PostgreSQL/Redis. Cần xác nhận quyền sử dụng nguồn dữ liệu trước khi công bố công khai.
-- `include_backtest` hiện trả trạng thái `unavailable` nếu chưa có lịch sử khuyến nghị đủ để kiểm định giao dịch; các kiểm định thống kê của mô hình nằm trong báo cáo QUANT.
+- `include_backtest` kiểm định các tín hiệu MUA từ snapshot thật đã công bố theo nguyên tắc point-in-time: vào ở giá đóng cửa phiên kế tiếp, thoát sau số phiên cấu hình và trừ chi phí khứ hồi. Báo cáo chỉ trả chỉ số hiệu quả khi có ít nhất `QUANTIK_BACKTEST_MIN_SAMPLES` mẫu đã hoàn tất (mặc định 5); trước đó trả `insufficient_history`, không sinh số liệu giả.
 
 Kiểm tra frontend: `pnpm build`. Kiểm tra API/queue: `cd backend && .venv\Scripts\python.exe -m unittest discover -s tests -v`. Kiểm tra nguồn thật trên database tạm: `cd backend && .venv\Scripts\python.exe tests\live_smoke.py`.
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import QuantDiagnostics from './QuantDiagnostics.jsx';
+import './backtest.css';
 
 const fmt = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
 const labels = { queued: 'Đang chờ worker', starting: 'Đang khởi tạo', fetch: 'Thu thập dữ liệu giá và thị trường',
@@ -9,6 +10,11 @@ const labels = { queued: 'Đang chờ worker', starting: 'Đang khởi tạo', f
 const phases = [['fetch', labels.fetch], ['models', labels.models], ['risk', labels.risk],
   ['visual', labels.visual], ['done', labels.done]];
 const phaseOrder = ['queued', 'starting', ...phases.map(([key]) => key)];
+
+function Backtest({ result }) {
+  if (!result) return null;
+  return <section className="analysis-panel backtest-panel"><div className="section-title"><span>KIỂM ĐỊNH KHUYẾN NGHỊ ĐÃ CÔNG BỐ</span><small>{result.status === 'completed' ? `${result.sample_size} mẫu · ${result.horizon_sessions} phiên` : 'CHƯA ĐỦ LỊCH SỬ'}</small></div>{result.status === 'completed' ? <div className="backtest-metrics"><div><small>TỶ LỆ THẮNG</small><strong>{result.win_rate_pct}%</strong></div><div><small>LỢI NHUẬN TB</small><strong>{result.average_return_pct}%</strong></div><div><small>TRUNG VỊ</small><strong>{result.median_return_pct}%</strong></div><div><small>TỆ NHẤT</small><strong>{result.worst_return_pct}%</strong></div></div> : <p>{result.reason}</p>}<p className="quant-caption">Đo từ giá đóng cửa phiên kế tiếp đến sau {result.horizon_sessions} phiên, trừ {result.round_trip_cost_pct ?? 0}% chi phí khứ hồi. Chỉ dùng tín hiệu MUA từ snapshot đã công bố.</p></section>;
+}
 
 function LiveQuantReport({ symbol, jobId }) {
   const [state, setState] = useState({ loading: true, report: null, error: '' });
@@ -29,7 +35,7 @@ function LiveQuantReport({ symbol, jobId }) {
   if (state.loading) return <section className="analysis-panel quant-live-state" role="status">Đang tải báo cáo {symbol}…</section>;
   if (state.error) return <section className="analysis-panel quant-live-state" role="alert">Không lấy được báo cáo QUANT: {state.error}</section>;
   const r = state.report;
-  return <section className="report-section"><div className="section-title"><span>BÁO CÁO QUANT / {symbol}</span><small>{r.analysis_mode === 'synthetic_demo' ? 'BÁO CÁO MINH HỌA · KHÔNG CHẠY QUANT-CORE' : 'PHÂN TÍCH QUANT-CORE'} · DỮ LIỆU ĐẾN {r.as_of}</small></div><div className="report-hero"><div><span>ĐIỂM QUANT</span><strong>{r.score ?? '—'}<small> / 100</small></strong></div><div><span>QUYẾT ĐỊNH</span><strong>{r.action || '—'}</strong></div><div><span>ĐÁNH GIÁ</span><strong>{r.rating || '—'}</strong></div><div><span>LỢI NHUẬN DỰ BÁO</span><strong>{r.fcast?.ensemble_ret_pct ?? '—'}%</strong></div></div><QuantDiagnostics report={r} /><div className="quant-artifacts">{r.chart_manifest?.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">Biểu đồ {item.kind} ↗</a>)}{r.backtest?.status === 'unavailable' && <p>{r.backtest.reason}</p>}</div></section>;
+  return <section className="report-section"><div className="section-title"><span>BÁO CÁO QUANT / {symbol}</span><small>{r.analysis_mode === 'synthetic_demo' ? 'BÁO CÁO MINH HỌA · KHÔNG CHẠY QUANT-CORE' : 'PHÂN TÍCH QUANT-CORE'} · DỮ LIỆU ĐẾN {r.as_of}</small></div><div className="report-hero"><div><span>ĐIỂM QUANT</span><strong>{r.score ?? '—'}<small> / 100</small></strong></div><div><span>QUYẾT ĐỊNH</span><strong>{r.action || '—'}</strong></div><div><span>ĐÁNH GIÁ</span><strong>{r.rating || '—'}</strong></div><div><span>LỢI NHUẬN DỰ BÁO</span><strong>{r.fcast?.ensemble_ret_pct ?? '—'}%</strong></div></div><QuantDiagnostics report={r} /><Backtest result={r.backtest} /><div className="quant-artifacts">{r.chart_manifest?.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">Biểu đồ {item.kind} ↗</a>)}</div></section>;
 }
 
 export function JobDetail({ id, go }) {

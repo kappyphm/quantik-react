@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,6 +17,7 @@ from fastapi.testclient import TestClient
 from server import app
 from store import connect, create_scan, dumps, init_db, new_job, now, update_job
 from worker import process_one, run_scan
+from backtest_service import recommendation_backtest
 
 
 class ApiQueueTest(unittest.TestCase):
@@ -145,6 +147,25 @@ class ApiQueueTest(unittest.TestCase):
         self.assertNotEqual(latest, created['run_id'])
         with connect(write=True) as db:
             db.execute("UPDATE jobs SET status='cancelled' WHERE id=?", (created['job_id'],))
+
+    def test_recommendation_backtest_uses_only_mature_published_signals(self):
+        start = date(2026, 1, 1)
+        bars = [{'time': (start + timedelta(days=index)).isoformat(), 'close': 100 + index}
+                for index in range(45)]
+        with connect(write=True) as db:
+            for index in range(5):
+                signal_day = bars[index]['time']
+                run_id = f'REAL-BT-{index}'
+                db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,
+                              published_at,data_as_of) VALUES (?,?,?,?,'published',?,?,?)""",
+                           (run_id, signal_day, 'MANUAL', 1, now(), now(), signal_day))
+                db.execute("INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json) VALUES (?,?,?,?,?)",
+                           (run_id, 'FPT', dumps({'symbol': 'FPT', 'recommendation': 'MUA'}),
+                            dumps({'symbol': 'FPT'}), dumps(bars[:index + 1])))
+        result = recommendation_backtest('FPT', bars)
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(result['sample_size'], 5)
+        self.assertGreater(result['win_rate_pct'], 0)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,7 @@
+.backtest-panel{margin-top:18px}
+.backtest-panel>p{padding:0 16px;color:var(--muted)}
+.backtest-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.backtest-metrics>div{background:var(--raised);padding:16px}
+.backtest-metrics small{display:block;color:var(--faint);font:10px 'IBM Plex Mono';margin-bottom:7px}
+.backtest-metrics strong{font:600 20px 'IBM Plex Mono';color:var(--amber)}
+@media(max-width:720px){.backtest-metrics{grid-template-columns:repeat(2,1fr)}}

@@ -17,6 +17,7 @@ from runtime_env import load_project_env
 
 load_project_env()
 from engine import quant_one, scan_all
+from backtest_service import recommendation_backtest
 from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now, update_job
 
 log = logging.getLogger("quantik.worker")
@@ -123,10 +124,11 @@ def run_quant(job):
         update_job(job["id"], phase, pct, message)
 
     current_run = params.get("reference_run_id")
+    current_bars = []
     if current_run and current_run.startswith("DEMO-"):
         report, visuals = demo_quant(job, current_run, progress)
     else:
-        report, visuals = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
+        report, visuals, current_bars = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
         report["analysis_mode"] = "quant_core"
     report["job_id"] = job["id"]
     report["reference_run_id"] = current_run
@@ -144,7 +146,9 @@ def run_quant(job):
                                               "url": f"/api/v1/quant/reports/{job['id']}/artifacts/{artifact_id}"})
     report["visual_errors"] = visuals.get("skipped", {})
     if params.get("include_backtest"):
-        report["backtest"] = {"status": "unavailable", "reason": "Chưa có lịch sử khuyến nghị để kiểm định giao dịch; các kiểm định thống kê nằm trong báo cáo."}
+        report["backtest"] = recommendation_backtest(symbol, current_bars)
+    else:
+        report["backtest"] = {"status": "skipped", "reason": "Người dùng không yêu cầu kiểm định lịch sử."}
     update_job(job["id"], "done", 100, "Đã hoàn tất báo cáo", status="succeeded", report=report)
 
 
