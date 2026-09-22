@@ -528,15 +528,18 @@ def admin_set_calendar(trading_date: str, body: CalendarRequest,
     except ValueError as exc:
         raise HTTPException(422, "Ngày không hợp lệ") from exc
     actor = (x_admin_actor or "admin-key")[:80]
+    reason = body.reason.strip()
+    if len(reason) < 2:
+        raise HTTPException(422, "Lý do phải có ít nhất 2 ký tự")
     with connect(write=True) as db:
         db.execute("""INSERT INTO trading_calendar(trading_date,is_trading_day,reason,actor,updated_at)
                       VALUES (?,?,?,?,?) ON CONFLICT(trading_date) DO UPDATE SET
                       is_trading_day=excluded.is_trading_day,reason=excluded.reason,
                       actor=excluded.actor,updated_at=excluded.updated_at""",
-                   (trading_date, int(body.is_trading_day), body.reason.strip(), actor, now()))
+                   (trading_date, int(body.is_trading_day), reason, actor, now()))
     audit_admin("calendar.set", trading_date, actor)
     return {"trading_date": trading_date, "is_trading_day": body.is_trading_day,
-            "reason": body.reason.strip()}
+            "reason": reason}
 
 
 @app.delete("/api/v1/admin/calendar/{trading_date}")

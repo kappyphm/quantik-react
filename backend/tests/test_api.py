@@ -136,6 +136,8 @@ class ApiQueueTest(unittest.TestCase):
             calendar = client.put('/api/v1/admin/calendar/2026-09-23',
                                   json={'is_trading_day': False, 'reason': 'Ngày nghỉ kiểm thử'}, headers=headers)
             self.assertEqual(calendar.status_code, 200)
+            self.assertEqual(client.put('/api/v1/admin/calendar/2026-09-24',
+                                        json={'is_trading_day': False, 'reason': '  '}, headers=headers).status_code, 422)
             self.assertFalse(client.get('/api/v1/admin/calendar', headers=headers).json()['items'][0]['is_trading_day'])
             self.assertEqual(client.delete('/api/v1/admin/calendar/2026-09-23', headers=headers).status_code, 200)
             with connect(write=True) as db:
