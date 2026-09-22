@@ -10,7 +10,7 @@ import os
 import sqlite3
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -82,7 +82,7 @@ def init_db():
           progress_pct INTEGER NOT NULL DEFAULT 0,
           params_json TEXT NOT NULL, report_json TEXT,
           idempotency_key TEXT, created_at TEXT NOT NULL,
-          started_at TEXT, finished_at TEXT, error TEXT,
+          started_at TEXT, finished_at TEXT, heartbeat_at TEXT, error TEXT,
           FOREIGN KEY(owner) REFERENCES sessions(id)
         );
         CREATE UNIQUE INDEX IF NOT EXISTS jobs_idempotency ON jobs(owner, idempotency_key)
@@ -102,6 +102,9 @@ def init_db():
           FOREIGN KEY(job_id) REFERENCES jobs(id)
         );
         """)
+        columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
+        if "heartbeat_at" not in columns:
+            db.execute("ALTER TABLE jobs ADD COLUMN heartbeat_at TEXT")
 
 
 def new_session() -> str:
@@ -139,11 +142,29 @@ def new_job(kind: str, owner: str | None, symbol: str | None, params: dict,
 
 def claim_job() -> dict | None:
     with connect(write=True) as db:
+        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=90)).isoformat(timespec="seconds")
+        future = (datetime.now(timezone.utc) + timedelta(seconds=90)).isoformat(timespec="seconds")
+        stale = db.execute("SELECT id,kind,params_json FROM jobs WHERE status='running' AND "
+                           "(COALESCE(heartbeat_at,started_at,created_at) < ? OR "
+                           "COALESCE(heartbeat_at,started_at,created_at) > ?)", (cutoff, future)).fetchall()
+        for old in stale:
+            db.execute("UPDATE jobs SET status='queued',phase='queued',progress_pct=0,started_at=NULL,heartbeat_at=NULL WHERE id=?", (old["id"],))
+            if old["kind"] == "scan":
+                run_id = loads(old["params_json"], {}).get("run_id")
+                db.execute("UPDATE scan_runs SET status='queued',started_at=NULL WHERE id=? AND status='running'", (run_id,))
+            db.execute("INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at) VALUES (?,'job.progress','queued',0,?,?)",
+                       (old["id"], "Worker bị gián đoạn; tác vụ được xếp lại", now()))
         row = db.execute("SELECT * FROM jobs WHERE status='queued' ORDER BY created_at,id LIMIT 1").fetchone()
         if not row:
             return None
-        db.execute("UPDATE jobs SET status='running',phase='starting',started_at=? WHERE id=?", (now(), row["id"]))
+        timestamp = now()
+        db.execute("UPDATE jobs SET status='running',phase='starting',started_at=?,heartbeat_at=? WHERE id=?", (timestamp, timestamp, row["id"]))
         return dict(db.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone())
+
+
+def heartbeat_job(job_id: str):
+    with connect(write=True) as db:
+        db.execute("UPDATE jobs SET heartbeat_at=? WHERE id=? AND status='running'", (now(), job_id))
 
 
 def update_job(job_id: str, phase: str, progress: int, message: str,
@@ -151,11 +172,11 @@ def update_job(job_id: str, phase: str, progress: int, message: str,
     progress = max(0, min(100, int(progress)))
     event_type = "job.succeeded" if status == "succeeded" else "job.failed" if status == "failed" else "job.progress"
     with connect(write=True) as db:
-        db.execute("""UPDATE jobs SET status=?,phase=?,progress_pct=?,
+        db.execute("""UPDATE jobs SET status=?,phase=?,progress_pct=?,heartbeat_at=?,
                       report_json=COALESCE(?,report_json),error=?,
                       finished_at=CASE WHEN ? IN ('succeeded','failed','cancelled') THEN ? ELSE finished_at END
                       WHERE id=?""",
-                   (status, phase, progress, dumps(report) if report is not None else None,
+                   (status, phase, progress, now(), dumps(report) if report is not None else None,
                     error, status, now(), job_id))
         db.execute("""INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at)
                       VALUES (?,?,?,?,?,?)""", (job_id, event_type, phase, progress, message, now()))

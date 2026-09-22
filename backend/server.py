@@ -60,7 +60,7 @@ def admin_or_403(x_admin_key: str | None):
 def latest_run(db):
     row = db.execute("""SELECT r.* FROM scan_runs r JOIN publication p ON p.run_id=r.id
                         WHERE p.key='latest' AND r.status='published'""").fetchone()
-    if not row:
+    if not row or (row["id"].startswith("DEMO-") and os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() != "true"):
         raise HTTPException(404, detail={"code": "NO_PUBLISHED_SCAN", "message": "Chưa có bản quét được công bố"})
     return row
 
@@ -108,6 +108,22 @@ def scan_latest():
         row = latest_run(db)
         return {key: row[key] for key in ("id", "slot", "trading_date", "status", "data_as_of",
                                            "published_at", "universe_count", "analyzed_count", "failed_count")}
+
+
+@app.get("/api/v1/scans/status")
+def scan_status():
+    """Show real scan progress even before the first real publication."""
+    with connect() as db:
+        run = db.execute("SELECT * FROM scan_runs WHERE id NOT LIKE 'DEMO-%' ORDER BY created_at DESC LIMIT 1").fetchone()
+        if not run:
+            return {"status": "not_started"}
+        job = db.execute("SELECT status,phase,progress_pct,error FROM jobs WHERE kind='scan' AND params_json LIKE ? ORDER BY created_at DESC LIMIT 1",
+                         (f'%{run["id"]}%',)).fetchone()
+    return {"run_id": run["id"], "status": run["status"], "slot": run["slot"],
+            "trading_date": run["trading_date"], "data_as_of": run["data_as_of"],
+            "universe_count": run["universe_count"], "analyzed_count": run["analyzed_count"],
+            "phase": job["phase"] if job else None, "progress_pct": job["progress_pct"] if job else 0,
+            "error": run["error"] or (job["error"] if job else None)}
 
 
 def query_results(run_id: str, q: str, exchange: str | None, recommendation: str | None,

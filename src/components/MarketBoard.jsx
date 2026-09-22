@@ -4,7 +4,7 @@ import { stocks } from '../demo.js';
 import { demoBars } from '../demoPrices.js';
 import Pagination from './Pagination.jsx';
 
-const fmt = (value, digits = 2) => value.toLocaleString('vi-VN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const fmt = (value, digits = 2) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('vi-VN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const change = bars => {
   const current = bars.at(-1).close;
   const previous = bars.at(-2).close;
@@ -28,7 +28,7 @@ function IndexChart({ bars, scale = 14.2, isDemo = false }) {
     chart.timeScale().fitContent();
     return () => chart.remove();
   }, [bars, scale]);
-  return <div className="market-index-chart" ref={host} role="img" aria-label={isDemo ? 'Biểu đồ VN-Index minh họa bằng dữ liệu giả lập' : 'Biểu đồ VN-Index từ bản quét đã công bố'} />;
+  return <div className="market-index-chart" ref={host} role="img" aria-label={isDemo ? 'Biểu đồ VN-Index minh họa bằng dữ liệu giả lập' : 'Biểu đồ VN-Index từ Vnstock'} />;
 }
 
 export default function MarketBoard({ apiReady = false }) {
@@ -59,7 +59,7 @@ export default function MarketBoard({ apiReady = false }) {
     {apiReady && error ? <div className="market-api-empty">{error}</div> : <>
     {index ? <div className="market-index"><div className="market-index-stat"><span>VN-INDEX {apiReady ? '· EOD' : '· MINH HỌA'}</span><strong>{fmt(index.current * scale)}</strong><b className={index.difference >= 0 ? 'positive' : 'negative'}>{index.difference >= 0 ? '+' : ''}{fmt(index.difference * scale)} ({index.percent >= 0 ? '+' : ''}{fmt(index.percent)}%)</b></div><IndexChart bars={indexBars} scale={scale} isDemo={!apiReady || remote?.run_id?.startsWith('DEMO')} /></div> : <div className="market-api-empty">{remote ? 'Chưa có dữ liệu VN-Index trong bản quét.' : 'Đang tải dữ liệu VN-Index…'}</div>}
     <div className="market-breadth">{advances != null && <span><i className="up-dot"/> Tăng <strong>{advances}</strong></span>}{declines != null && <span><i className="down-dot"/> Giảm <strong>{declines}</strong></span>}<span>{total} mã · HOSE / HNX / UPCoM</span></div>
-    <div className="market-board-scroll"><table className="market-board-table"><thead><tr><th>MÃ / SÀN</th><th>GIÁ</th><th>+/−</th><th>%</th><th>KL</th></tr></thead><tbody>{visible.map(row => <tr key={row.symbol}><td><strong>{row.symbol}</strong><small>{row.exchange}</small></td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{fmt(row.current)}</td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{row.difference >= 0 ? '+' : ''}{fmt(row.difference)}</td><td className={row.difference >= 0 ? 'positive' : 'negative'}>{row.percent >= 0 ? '+' : ''}{fmt(row.percent)}%</td><td>{fmt(row.volume, 0)}</td></tr>)}</tbody></table></div>
+    <div className="market-board-scroll"><table className="market-board-table"><thead><tr><th>MÃ / SÀN</th><th>GIÁ</th><th>+/−</th><th>%</th><th>KL</th></tr></thead><tbody>{visible.map(row => <tr key={row.symbol}><td><strong>{row.symbol}</strong><small>{row.exchange}</small></td><td className={row.difference == null ? '' : row.difference >= 0 ? 'positive' : 'negative'}>{fmt(row.current)}</td><td className={row.difference == null ? '' : row.difference >= 0 ? 'positive' : 'negative'}>{row.difference == null ? '—' : `${row.difference >= 0 ? '+' : ''}${fmt(row.difference)}`}</td><td className={row.percent == null ? '' : row.percent >= 0 ? 'positive' : 'negative'}>{row.percent == null ? '—' : `${row.percent >= 0 ? '+' : ''}${fmt(row.percent)}%`}</td><td>{fmt(row.volume, 0)}</td></tr>)}</tbody></table></div>
     <Pagination total={total} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={size => { setPageSize(size); setPage(1); }} />
     </>}
     <div className="market-board-foot">{apiReady ? 'Giá từ bảng giá Vnstock · thời điểm cập nhật theo nhà cung cấp' : 'Giá, chỉ số và khối lượng giả lập cho PoC · Không phải dữ liệu giao dịch trực tiếp'}</div>

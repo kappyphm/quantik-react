@@ -595,7 +595,12 @@ class QuantVisualizer:
 
     def terminal_dashboard(self, path: Path):
         """Six-panel research terminal, with model and review status separated."""
-        from terminal_research_layout import render_research_terminal
+        try:
+            from terminal_research_layout import render_research_terminal
+        except ModuleNotFoundError as exc:
+            if exc.name != "terminal_research_layout":
+                raise
+            return self._terminal_dashboard_reference(Path(path))
         return render_research_terminal(self, Path(path))
 
     def _terminal_dashboard_reference(self, path: Path):

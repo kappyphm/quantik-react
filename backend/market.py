@@ -58,10 +58,15 @@ def overview(page: int, page_size: int) -> dict:
             for symbol in page_symbols:
                 row = rows.get(symbol)
                 if row is None:
+                    items.append({'symbol': symbol, 'exchange': '—', 'price': None,
+                                  'change': None, 'change_pct': None, 'volume': None})
                     continue
                 price = float(row['close_price'])
                 reference = float(row['reference_price'])
                 if price <= 0 or reference <= 0:
+                    items.append({'symbol': symbol, 'exchange': str(row['exchange']),
+                                  'price': None, 'change': None, 'change_pct': None,
+                                  'volume': None})
                     continue
                 items.append({'symbol': symbol, 'exchange': str(row['exchange']),
                               'price': price, 'change': price - reference,

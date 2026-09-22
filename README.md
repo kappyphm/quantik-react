@@ -1,10 +1,10 @@
-# QuanTik — React + API PoC
+# QuanTik — React + FastAPI
 
 Frontend React/Vite, FastAPI, SQLite, worker và scheduler cho luồng bảng điện → quét toàn sàn → chi tiết mã → job QUANT → báo cáo. [SRS](docs/SRS.md) và [System Design](docs/SYSTEM_DESIGN.md) mô tả kiến trúc đích; phần dưới là trạng thái triển khai hiện tại.
 
 `quant-core/` được giữ nguyên làm mã gốc đối chiếu. Bản sao dùng bởi backend nằm tại `backend/quant_engine/`; hash gốc trong `docs/quant-core-baseline.sha256`. Bản sao `quant.py` có thay đổi ở lớp kết nối dữ liệu để dùng API `vnstock` 4 và yêu cầu 500 bar; logic phân tích gốc giữ nguyên.
 
-## Chạy tích hợp với snapshot mẫu
+## Chạy với dữ liệu Vnstock
 
 Các lệnh sau dành cho **Windows Command Prompt (CMD)**, chạy từ thư mục gốc `D:\20_Workspace\1_software\quantik-react`. Đã kiểm thử với Python 3.13, Node và pnpm. Nếu `backend\.venv` đã tồn tại thì **bỏ qua việc tạo lại**; không chạy `python -m venv` khi API/worker đang dùng môi trường đó.
 
@@ -23,7 +23,6 @@ Backend nạp file này khi khởi động API, worker hoặc scheduler. `.env` 
 ```bat
 if not exist backend\.venv\Scripts\python.exe python -m venv backend\.venv
 backend\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-backend\.venv\Scripts\python.exe backend\seed_demo.py
 ```
 
 Mở ba cửa sổ CMD riêng, mỗi cửa sổ bắt đầu tại thư mục gốc dự án:
@@ -43,18 +42,25 @@ pnpm install
 pnpm dev
 ```
 
-Khi cần chạy lịch quét từ nguồn thật, mở thêm CMD tại thư mục gốc rồi chạy `cd backend` và `.venv\Scripts\python.exe scheduler.py`. Scheduler sẽ xếp job quét thật, nên không bật khi chỉ demo snapshot mẫu.
+Để xếp một bản quét thủ công, chạy từ `backend`:
 
-Mở `http://localhost:5173`. Vite proxy `/api` sang cổng 8000. `seed_demo.py` tạo bản công bố `DEMO-POST-20260921`; bảng quét, giá và báo cáo chạy từ database nhưng **dữ liệu phân tích vẫn là minh họa**. Worker nhận job demo và trả báo cáo có `analysis_mode=synthetic_demo`, được ghi nhãn trong UI. Dữ liệu nằm ở `backend/data/quantik.sqlite` và tồn tại sau khi tắt trình duyệt. Phiên khách dùng cookie HttpOnly; mất cookie thì không truy cập được các job cũ.
+```bat
+.venv\Scripts\python.exe -c "from store import create_scan; from datetime import date; print(create_scan('MANUAL', date.today().isoformat()))"
+```
+
+Để chạy lịch PRE_OPEN và POST_CLOSE, mở thêm một tiến trình `scheduler.py`. Chỉ chạy một scheduler và một worker cho SQLite.
+
+Mở `http://localhost:5173`. Vite proxy `/api` sang cổng 8000. Bảng điện gọi Vnstock qua backend; `/scan` chỉ hiển thị bản quét thật sau khi worker hoàn tất kiểm tra độ phủ và công bố. Khi chưa có bản công bố, giao diện hiển thị tiến độ từ `/api/v1/scans/status`. Snapshot `DEMO-` cũ không được phục vụ mặc định. Dữ liệu job nằm ở `backend/data/quantik.sqlite`; phiên khách dùng cookie HttpOnly.
 
 Nếu API hoặc frontend đã chạy ở cổng 8000/5173, dùng tiến trình hiện có; không mở thêm một bản cùng cổng.
 
-Để chỉ xem giao diện demo độc lập trong CMD, chạy `set VITE_DEMO_MODE=true` rồi `pnpm dev` trong cùng cửa sổ. Chế độ API mặc định sẽ báo lỗi rõ nếu backend không sẵn sàng, không tự chuyển sang dữ liệu giả.
+Nếu backend không sẵn sàng, giao diện báo lỗi kết nối. Bản demo đã được lưu tại tag Git `demo-stable-2026-09-22`.
 
 ## Endpoint chính
 
 - `POST /api/v1/session`: tạo phiên khách.
-- `GET /api/v1/market/overview`: snapshot bảng điện có phân trang.
+- `GET /api/v1/market/overview`: bảng giá Vnstock có phân trang, cache 60 giây.
+- `GET /api/v1/scans/status`: tiến độ bản quét thật gần nhất.
 - `GET /api/v1/scans/latest`, `/results`, `/facets`, `/results/{symbol}`, `/results/{symbol}/ohlcv`: bản quét mới nhất, lọc và phân trang trên API.
 - `POST /api/v1/quant/jobs`, `GET /api/v1/quant/jobs`, `GET /api/v1/quant/jobs/{id}`, `GET /api/v1/quant/jobs/{id}/events`: hàng đợi bền vững và tiến độ SSE.
 - `GET /api/v1/quant/reports/{id}` và `/artifacts/{artifact_id}`: báo cáo và biểu đồ.
@@ -64,10 +70,11 @@ OpenAPI tại `http://localhost:8000/docs`.
 
 ## Phạm vi và giới hạn hiện tại
 
-- `backend/scheduler.py` xếp job PRE_OPEN lúc 07:00 và POST_CLOSE lúc 16:20, giờ Việt Nam, ngày làm việc; ngày nghỉ phải khai báo trong `QUANTIK_HOLIDAYS=YYYY-MM-DD,...`. Chỉ chạy một scheduler. Một lần quét thật mất khoảng một giờ theo số liệu thủ công; chạy một worker sẽ xử lý các job tuần tự.
-- Worker kết nối bản sao `quant-core` cho quét thật và phân tích một mã. Bản sao `quant.py` dùng API tương đương trong `vnstock` 4 vì `vnstock_data` không có trên PyPI mặc định. Đã chạy FPT thực tế với 252 bar FPT và VN-Index, hoàn tất mô hình và 6 biểu đồ; quét rút gọn FPT cũng tạo summary. Chưa chạy hết 1.430 mã hoặc đo độ phủ/toàn bộ thời gian. Biểu đồ thứ 7 cần `terminal_research_layout`, module này không có trong thư mục gốc hiện tại. Cần xác nhận quyền dùng nguồn dữ liệu trước khi công bố dữ liệu thật.
-- Backend hiện dùng SQLite và một worker, phù hợp tích hợp nội bộ/PoC. Chưa có tài khoản người dùng, phân quyền quản trị nhiều người, cơ chế retry/giám sát production, nguồn realtime, hay PostgreSQL/Redis. Trang chủ hiển thị snapshot cuối phiên, không phải bảng giá realtime.
+- `backend/scheduler.py` xếp job PRE_OPEN lúc 07:00 và POST_CLOSE lúc 16:20, giờ Việt Nam, ngày làm việc; ngày nghỉ phải khai báo trong `QUANTIK_HOLIDAYS=YYYY-MM-DD,...`. Một worker xử lý các job tuần tự.
+- Worker lấy OHLCV qua Vnstock với nhịp mặc định 1,5 giây trước mỗi yêu cầu (đổi bằng `QUANTIK_FETCH_INTERVAL_SECONDS`). Dữ liệu đã tải được checkpoint theo run ở `backend/data/scan_cache/`; job mất heartbeat được xếp lại để chạy tiếp. Gói Community giới hạn 60 request/phút, nên một đợt 1.430 mã có thể mất nhiều thời gian.
+- Đã kiểm thử luồng FPT thật: quét, tạo job qua API, chạy quant-core, báo cáo và tải đủ 7 ảnh. Chưa xác nhận một đợt toàn sàn đủ 1.430 mã hoàn tất và đạt ngưỡng công bố trên máy hiện tại. Bảng điện là dữ liệu theo thời điểm nhà cung cấp trả về, không cam kết realtime.
+- Backend hiện dùng SQLite và một worker, phù hợp tích hợp nội bộ. Chưa có tài khoản đăng nhập, phân quyền quản trị nhiều người, retry phân tán, hay PostgreSQL/Redis. Cần xác nhận quyền sử dụng nguồn dữ liệu trước khi công bố công khai.
 - `include_backtest` hiện trả trạng thái `unavailable` nếu chưa có lịch sử khuyến nghị đủ để kiểm định giao dịch; các kiểm định thống kê của mô hình nằm trong báo cáo QUANT.
 
-Kiểm tra frontend: `pnpm build`. Kiểm tra cú pháp Python: `python -m compileall -q backend`.
+Kiểm tra frontend: `pnpm build`. Kiểm tra API/queue: `cd backend && .venv\Scripts\python.exe -m unittest discover -s tests -v`. Kiểm tra nguồn thật trên database tạm: `cd backend && .venv\Scripts\python.exe tests\live_smoke.py`.
 

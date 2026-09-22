@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import math
+import os
+import re
+import time
 from pathlib import Path
 
 from quant_service import present_report
@@ -51,7 +54,7 @@ def screen_frame(symbol, frame):
                   "distribution": distribution, "assessment": assessment})
 
 
-def scan_all(progress, symbols=None):
+def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None):
     """Collect all three exchanges, screen each fetched code and batch QUANT once."""
     import pandas as pd
     from quant_engine.quant import QuantPipeline, ScreenerBridge, _simplify_user_summary
@@ -60,16 +63,46 @@ def scan_all(progress, symbols=None):
     if symbols is None:
         from quant_engine.crawl_data import DataProvider
         symbols = DataProvider().get_stock_list("ALL")
-    universe = list(dict.fromkeys(symbols))
+    universe = list(dict.fromkeys(str(symbol).upper() for symbol in symbols if re.fullmatch(r"[A-Z0-9]{3,5}", str(symbol).upper())))
     if not universe:
         raise RuntimeError("Nguồn dữ liệu không trả danh sách mã; không công bố run rỗng")
     bridge = ScreenerBridge()
     data, failed, screening = {}, {}, {}
+    if checkpoint_dir is not None:
+        checkpoint_dir = Path(checkpoint_dir)
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    request_delay = max(0.0, float(os.getenv("QUANTIK_FETCH_INTERVAL_SECONDS", "1.5")))
     progress("collecting", 5, f"Đang thu thập OHLCV cho {len(universe)} mã")
     for index, symbol in enumerate(universe, 1):
         try:
-            fetched = bridge.fetch_ohlcv([symbol], days=252, delay=0)
-            frame = fetched.get(symbol)
+            cache_file = checkpoint_dir / f"{symbol}.csv" if checkpoint_dir else None
+            frame = None
+            if cache_file and cache_file.is_file():
+                try:
+                    frame = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+                    if not {"open", "high", "low", "close", "volume"}.issubset(frame.columns) or len(frame) < 30:
+                        frame = None
+                    elif cache_file.with_suffix(".source").is_file():
+                        frame.attrs["source"] = cache_file.with_suffix(".source").read_text(encoding="utf-8").strip()
+                except (OSError, ValueError):
+                    frame = None
+            if frame is None:
+                for attempt in range(3):
+                    time.sleep(request_delay)
+                    try:
+                        fetched = bridge.fetch_ohlcv([symbol], days=252, delay=0)
+                        frame = fetched.get(symbol)
+                        break
+                    except SystemExit:
+                        if attempt == 2:
+                            raise RuntimeError(f"Vnstock từ chối sau 3 lần thử: {symbol}")
+                        progress("collecting", 5 + int(55 * index / len(universe)), "Đạt giới hạn Vnstock; chờ 65 giây")
+                        time.sleep(65)
+                if frame is not None and cache_file:
+                    temporary = cache_file.with_suffix(".tmp")
+                    frame.to_csv(temporary)
+                    temporary.replace(cache_file)
+                    cache_file.with_suffix(".source").write_text(str(frame.attrs.get("source") or "unknown"), encoding="utf-8")
             if frame is None:
                 failed[symbol] = "NO_OHLCV"
             else:
@@ -79,6 +112,8 @@ def scan_all(progress, symbols=None):
                 except Exception as exc:
                     screening[symbol] = {"error": f"{type(exc).__name__}: {exc}"}
         except Exception as exc:
+            if isinstance(exc, RuntimeError) and str(exc).startswith("Vnstock từ chối"):
+                raise
             failed[symbol] = f"{type(exc).__name__}: {exc}"
         if index == len(universe) or index % 10 == 0:
             progress("collecting", 5 + int(55 * index / len(universe)), f"Thu thập {index}/{len(universe)} mã")

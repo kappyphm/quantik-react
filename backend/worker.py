@@ -6,6 +6,7 @@ import logging
 import os
 import time
 import traceback
+import threading
 import uuid
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from runtime_env import load_project_env
 
 load_project_env()
 from engine import quant_one, scan_all
-from store import claim_job, connect, dumps, init_db, loads, now, update_job
+from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now, update_job
 
 log = logging.getLogger("quantik.worker")
 ARTIFACT_ROOT = Path(os.getenv("QUANTIK_ARTIFACT_ROOT", Path(__file__).resolve().parent / "data" / "artifacts"))
@@ -22,6 +23,11 @@ ARTIFACT_ROOT = Path(os.getenv("QUANTIK_ARTIFACT_ROOT", Path(__file__).resolve()
 def run_scan(job):
     params = loads(job["params_json"], {})
     run_id = params["run_id"]
+    with connect() as db:
+        existing = db.execute("SELECT status FROM scan_runs WHERE id=?", (run_id,)).fetchone()
+    if existing and existing["status"] == "published":
+        update_job(job["id"], "done", 100, "Bản quét đã công bố", status="succeeded")
+        return
     with connect(write=True) as db:
         db.execute("UPDATE scan_runs SET status='running',started_at=? WHERE id=?", (now(), run_id))
 
@@ -29,7 +35,8 @@ def run_scan(job):
         update_job(job["id"], phase, pct, message)
 
     try:
-        result = scan_all(progress, symbols=params.get("symbols"))
+        result = scan_all(progress, symbols=params.get("symbols"),
+                          checkpoint_dir=ARTIFACT_ROOT.parent / "scan_cache" / run_id)
         coverage = result["analyzed_count"] / max(1, result["universe_count"])
         min_coverage = float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80"))
         if coverage < min_coverage:
@@ -68,6 +75,7 @@ def run_quant(job):
         report, visuals = demo_quant(job, current_run, progress)
     else:
         report, visuals = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
+        report["analysis_mode"] = "quant_core"
     report["job_id"] = job["id"]
     report["reference_run_id"] = current_run
     report["chart_manifest"] = []
@@ -129,6 +137,17 @@ def process_one():
     if not job:
         return False
     log.info("Running %s job %s", job["kind"], job["id"])
+    stop_heartbeat = threading.Event()
+
+    def keep_alive():
+        while not stop_heartbeat.wait(20):
+            try:
+                heartbeat_job(job["id"])
+            except Exception:
+                log.exception("Heartbeat failed for job %s", job["id"])
+
+    heartbeat_thread = threading.Thread(target=keep_alive, daemon=True)
+    heartbeat_thread.start()
     try:
         if job["kind"] == "scan":
             run_scan(job)
@@ -138,6 +157,9 @@ def process_one():
         log.exception("Job %s failed", job["id"])
         update_job(job["id"], "failed", job["progress_pct"], f"Lỗi: {exc}",
                    status="failed", error=f"{type(exc).__name__}: {exc}")
+    finally:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=2)
     return True
 
 

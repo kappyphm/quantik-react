@@ -7,6 +7,7 @@ from pathlib import Path
 
 TEST_DIR = tempfile.TemporaryDirectory()
 os.environ['QUANTIK_DB_PATH'] = str(Path(TEST_DIR.name) / 'test.sqlite')
+os.environ['QUANTIK_ALLOW_DEMO'] = 'true'
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
@@ -67,6 +68,19 @@ class ApiQueueTest(unittest.TestCase):
             with client.stream('GET', f"/api/v1/quant/jobs/{created['job_id']}/events") as response:
                 response.read()
                 self.assertIn('event: job.succeeded', response.text)
+
+    def test_demo_publication_requires_explicit_opt_in(self):
+        previous = os.environ.get('QUANTIK_ALLOW_DEMO')
+        os.environ['QUANTIK_ALLOW_DEMO'] = 'false'
+        try:
+            with TestClient(app) as client:
+                self.assertEqual(client.get('/api/v1/scans/latest').status_code, 404)
+                self.assertEqual(client.get('/api/v1/scans/status').status_code, 200)
+        finally:
+            if previous is None:
+                os.environ.pop('QUANTIK_ALLOW_DEMO', None)
+            else:
+                os.environ['QUANTIK_ALLOW_DEMO'] = previous
 
 
 if __name__ == '__main__':
