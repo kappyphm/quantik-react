@@ -46,3 +46,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: cp .env-template .env
       - run: docker compose config --quiet
+
+  deployment-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API, worker and scheduler image
+        run: docker build --file backend/Dockerfile --tag quantik-api:ci .
+      - name: Build web image
+        run: docker build --file Dockerfile --tag quantik-web:ci .
