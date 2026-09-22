@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import threading
 import time
+import math
 from datetime import datetime, timezone
 
 from quant_engine.crawl_data import DataProvider
@@ -13,6 +14,14 @@ _lock = threading.Lock()
 _listing = (0.0, [])
 _index = (0.0, [])
 _pages = {}
+
+
+def _number(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _symbols():
@@ -61,17 +70,21 @@ def overview(page: int, page_size: int) -> dict:
                     items.append({'symbol': symbol, 'exchange': '—', 'price': None,
                                   'change': None, 'change_pct': None, 'volume': None})
                     continue
-                price = float(row['close_price'])
-                reference = float(row['reference_price'])
-                if price <= 0 or reference <= 0:
-                    items.append({'symbol': symbol, 'exchange': str(row['exchange']),
+                price = _number(row.get('close_price'))
+                reference = _number(row.get('reference_price'))
+                volume = _number(row.get('volume_accumulated'))
+                exchange = str(row.get('exchange')).strip()
+                if exchange.casefold() in ('', 'nan', 'none', '<na>'):
+                    exchange = '—'
+                if price is None or reference is None or price <= 0 or reference <= 0:
+                    items.append({'symbol': symbol, 'exchange': exchange,
                                   'price': None, 'change': None, 'change_pct': None,
-                                  'volume': None})
+                                  'volume': int(volume) if volume is not None and volume >= 0 else None})
                     continue
-                items.append({'symbol': symbol, 'exchange': str(row['exchange']),
+                items.append({'symbol': symbol, 'exchange': exchange,
                               'price': price, 'change': price - reference,
                               'change_pct': (price / reference - 1) * 100,
-                              'volume': int(row['volume_accumulated'])})
+                              'volume': int(volume) if volume is not None and volume >= 0 else None})
         index_bars = _index_bars()
         result = {'source': 'vnstock_price_board',
                   'as_of': datetime.now(timezone.utc).isoformat(timespec='seconds'),
