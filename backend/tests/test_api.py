@@ -100,6 +100,21 @@ class ApiQueueTest(unittest.TestCase):
             self.assertEqual(failed.status_code, 503)
             self.assertNotIn('secret', failed.text)
 
+    def test_result_sort_keeps_missing_values_last(self):
+        missing = {'symbol': 'ABC', 'name': 'ABC', 'exchange': 'UPCOM',
+                   'score': None, 'analysis_status': 'insufficient_data'}
+        with connect(write=True) as db:
+            db.execute("INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json) VALUES (?,?,?,?,?)",
+                       ('FIXTURE-TEST', 'ABC', dumps(missing), dumps(missing), '[]'))
+        try:
+            for order in ('asc', 'desc'):
+                result = server.query_results('FIXTURE-TEST', '', None, None, None, None,
+                                              None, None, 'score', order, 1, 10)
+                self.assertEqual([item['symbol'] for item in result['items']], ['FPT', 'ABC'])
+        finally:
+            with connect(write=True) as db:
+                db.execute("DELETE FROM scan_results WHERE run_id='FIXTURE-TEST' AND symbol='ABC'")
+
     def test_admin_rerun_and_retry_are_audited(self):
         os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'
         headers = {'X-Admin-Key': 'test-admin-only', 'X-Admin-Actor': 'operator-test'}

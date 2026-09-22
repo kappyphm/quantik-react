@@ -174,9 +174,13 @@ def query_results(run_id: str, q: str, exchange: str | None, recommendation: str
              (score_min is None or (item.get("score") is not None and item["score"] >= score_min)) and
              (score_max is None or (item.get("score") is not None and item["score"] <= score_max))]
     sort = sort if sort in SORT_FIELDS else "score"
-    items.sort(key=lambda item: (item.get(sort) is None,
-                                 item.get(sort) if isinstance(item.get(sort), (int, float, bool)) else str(item.get(sort) or "").casefold() if isinstance(item.get(sort), str) else item.get(sort) or 0),
-               reverse=order.lower() != "asc")
+    def sort_value(item):
+        value = item.get(sort)
+        return value if isinstance(value, (int, float, bool)) else str(value or "").casefold()
+    present = [item for item in items if item.get(sort) is not None]
+    missing = [item for item in items if item.get(sort) is None]
+    present.sort(key=sort_value, reverse=order.lower() != "asc")
+    items = present + missing
     total = len(items)
     return {"total": total, "page": page, "page_size": page_size,
             "items": items[(page - 1) * page_size:page * page_size]}
