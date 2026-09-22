@@ -2638,7 +2638,7 @@ class QuantPipeline:
         r['rec'] = {'score': 50, 'rating': '⭐⭐⭐ PENDING', 'vni_regime': 'NEUTRAL'}
         return r
 
-    def batch(self, data, scr_df=None, idx_df=None, exchange_map=None):
+    def batch(self, data, scr_df=None, idx_df=None, exchange_map=None, progress_callback=None):
         exchange_map = exchange_map or {}
         data = {sym: _completed_daily_bars(df) for sym, df in data.items()}
         idx_df = _completed_daily_bars(idx_df)
@@ -2687,10 +2687,14 @@ class QuantPipeline:
             rp['sector'] = {'name': sec, 'trend': sector_trends.get(sec, {})}
             rp['cross_corr'] = sector_corr.get(sec, {})
             reports.append(rp)
+            if progress_callback is not None:
+                progress_callback('analyzing', i + 1, len(data), sym)
 
         # V7: Fit one pooled point-in-time cross-sectional model, then rebuild
         # directional agreement with sector residuals. MC remains untouched.
         log.info("\n  [LIGHTGBM] Training cross-sectional absolute/relative-return models...")
+        if progress_callback is not None:
+            progress_callback('cross_sectional', len(data), len(data), None)
         try:
             lightgbm_predictions, lightgbm_info = CrossSectionalLightGBMEngine.fit_predict(
                 validated_data, sector_map, idx_df=idx_df, horizon=CFG.FORECAST_HORIZON)
@@ -2739,6 +2743,8 @@ class QuantPipeline:
                 rp['rec'] = batch_scores[rp['symbol']]
                 rp['action'] = ActionEngine.decide(rp)
         reports.sort(key=lambda x:x.get('rec',{}).get('score',0), reverse=True)
+        if progress_callback is not None:
+            progress_callback('complete', len(data), len(data), None)
         return reports
 
     # COMMENTARY ENGINE 

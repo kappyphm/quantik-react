@@ -155,8 +155,20 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
     pipeline = QuantPipeline()
     screener_rows = [{"Mã CK": sym, "Tín hiệu": item.get("assessment", {}).get("overall_signal", "")}
                      for sym, item in screening.items() if "assessment" in item]
+    last_reported = {"value": 0}
+    def quant_progress(stage, current, total, symbol):
+        if stage == "analyzing":
+            if current != total and current - last_reported["value"] < 10:
+                return
+            last_reported["value"] = current
+            pct = 64 + int(23 * current / max(1, total))
+            progress("quantifying", pct, f"Đã chạy QUANT {current}/{total} mã{f' · {symbol}' if symbol else ''}")
+        elif stage == "cross_sectional":
+            progress("cross_sectional", 88, "Đang huấn luyện và áp dụng mô hình cross-sectional")
+        elif stage == "complete":
+            progress("scoring", 90, "Đã hoàn tất chấm điểm toàn sàn")
     reports = pipeline.batch(data, scr_df=pd.DataFrame(screener_rows), idx_df=index_frame,
-                             exchange_map=exchanges)
+                             exchange_map=exchanges, progress_callback=quant_progress)
     summary_frame = pipeline.summary_table(reports)
     summaries = {str(row["Symbol"]): clean(row.to_dict()) for _, row in summary_frame.iterrows()}
     localized_frame = _simplify_user_summary(summary_frame)

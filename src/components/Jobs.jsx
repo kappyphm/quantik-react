@@ -5,6 +5,8 @@ import './backtest.css';
 const fmt = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
 const labels = { queued: 'Đang chờ worker', starting: 'Đang khởi tạo', fetch: 'Thu thập dữ liệu giá và thị trường',
   quality: 'Kiểm tra chất lượng dữ liệu', models: 'Chạy các mô hình định lượng',
+  quantifying: 'Chạy QUANT toàn sàn', cross_sectional: 'Mô hình cross-sectional', scoring: 'Chấm điểm toàn sàn',
+  validating: 'Kiểm tra điều kiện công bố', collecting: 'Thu thập OHLCV toàn sàn', universe: 'Chốt universe theo sàn',
   risk: 'Đánh giá rủi ro và tín hiệu', visual: 'Tạo báo cáo và biểu đồ',
   done: 'Hoàn tất báo cáo', failed: 'Phân tích thất bại', cancelled: 'Đã hủy' };
 const phases = [['fetch', labels.fetch], ['models', labels.models], ['risk', labels.risk],
