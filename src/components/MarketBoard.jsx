@@ -36,11 +36,27 @@ export default function MarketBoard() {
   const [error, setError] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/v1/market/overview?page=${page}&page_size=${pageSize}`, { signal: controller.signal })
-      .then(async response => { if (!response.ok) throw new Error('Chưa có dữ liệu bảng điện'); return response.json(); })
-      .then(data => { setRemote(data); setError(''); })
-      .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
-    return () => controller.abort();
+    let active = true;
+    let inFlight = false;
+    const load = () => {
+      if (inFlight) return;
+      inFlight = true;
+      fetch(`/api/v1/market/overview?page=${page}&page_size=${pageSize}`, { signal: controller.signal })
+        .then(async response => { if (!response.ok) throw new Error('Chưa có dữ liệu bảng điện'); return response.json(); })
+        .then(data => { if (active) { setRemote(data); setError(''); } })
+        .catch(e => { if (active && e.name !== 'AbortError') setError(e.message); })
+        .finally(() => { inFlight = false; });
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    load();
+    const timer = window.setInterval(load, 60000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      controller.abort();
+    };
   }, [page, pageSize]);
   const indexBars = remote?.index_bars || [];
   const scale = 1;
