@@ -16,7 +16,7 @@ from pathlib import Path
 from runtime_env import load_project_env
 
 load_project_env()
-from engine import quant_from_snapshot, quant_one, scan_all
+from engine import quant_from_snapshot, scan_all
 from backtest_service import recommendation_backtest
 from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now, update_job
 
@@ -138,27 +138,22 @@ def run_quant(job):
         update_job(job["id"], phase, pct, message)
 
     current_run = params.get("reference_run_id")
-    current_bars = []
-    if current_run and current_run.startswith("DEMO-"):
-        report, visuals = demo_quant(job, current_run, progress)
-    else:
-        snapshot = None
-        if current_run:
-            with connect() as db:
-                snapshot = db.execute("""SELECT s.summary_json,s.ohlcv_json,r.index_json
-                                         FROM scan_results s JOIN scan_runs r ON r.id=s.run_id
-                                         WHERE s.run_id=? AND s.symbol=? AND r.status='published'""",
-                                      (current_run, symbol)).fetchone()
-        if snapshot:
-            summary = loads(snapshot["summary_json"], {})
-            current_bars = loads(snapshot["ohlcv_json"], [])
-            report, visuals, current_bars = quant_from_snapshot(
-                symbol, current_bars, loads(snapshot["index_json"], []),
-                summary.get("exchange", "UNKNOWN"), progress, output_dir,
-                params.get("include_backtest", True))
-        else:
-            report, visuals, current_bars = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
-        report["analysis_mode"] = "quant_core"
+    if not current_run or current_run.startswith("DEMO-"):
+        raise RuntimeError("Job không tham chiếu bản quét production")
+    with connect() as db:
+        snapshot = db.execute("""SELECT s.summary_json,s.ohlcv_json,r.index_json
+                                 FROM scan_results s JOIN scan_runs r ON r.id=s.run_id
+                                 WHERE s.run_id=? AND s.symbol=? AND r.status='published'
+                                 AND r.id NOT LIKE 'DEMO-%'""", (current_run, symbol)).fetchone()
+    if not snapshot:
+        raise RuntimeError("Snapshot đã công bố không còn khả dụng")
+    summary = loads(snapshot["summary_json"], {})
+    current_bars = loads(snapshot["ohlcv_json"], [])
+    report, visuals, current_bars = quant_from_snapshot(
+        symbol, current_bars, loads(snapshot["index_json"], []),
+        summary.get("exchange", "UNKNOWN"), progress, output_dir,
+        params.get("include_backtest", True))
+    report["analysis_mode"] = "quant_core"
     report["job_id"] = job["id"]
     report["reference_run_id"] = current_run
     report["chart_manifest"] = []
@@ -179,42 +174,6 @@ def run_quant(job):
     else:
         report["backtest"] = {"status": "skipped", "reason": "Người dùng không yêu cầu kiểm định lịch sử."}
     update_job(job["id"], "done", 100, "Đã hoàn tất báo cáo", status="succeeded", report=report)
-
-
-def demo_quant(job, run_id, progress):
-    """Exercise the full queue/report UI only for an explicitly seeded demo run."""
-    with connect() as db:
-        row = db.execute("SELECT summary_json,ohlcv_json FROM scan_results WHERE run_id=? AND symbol=?",
-                         (run_id, job["symbol"])).fetchone()
-    if not row:
-        raise RuntimeError("Không tìm thấy mã trong bản demo")
-    summary, bars = loads(row["summary_json"], {}), loads(row["ohlcv_json"], [])
-    for phase, pct, message in (("fetch", 12, "Đọc snapshot mẫu"),
-                                ("quality", 26, "Kiểm tra dữ liệu mẫu"),
-                                ("models", 54, "Chuẩn bị báo cáo minh họa"),
-                                ("risk", 76, "Tính thống kê minh họa"),
-                                ("visual", 92, "Tạo dữ liệu biểu đồ minh họa")):
-        progress(phase, pct, message)
-        time.sleep(0.35)
-    close = [bar["close"] for bar in bars]
-    peaks, peak = [], 0
-    for price in close:
-        peak = max(peak, price)
-        peaks.append(peak)
-    drawdown = [(price / high - 1) * 100 for price, high in zip(close, peaks)]
-    report = {"analysis_mode": "synthetic_demo", "symbol": job["symbol"],
-              "as_of": bars[-1]["time"], "score": summary.get("score"),
-              "rating": summary.get("rating"), "action": summary.get("recommendation"),
-              "score_comparable": False, "dist": {},
-              "stats": {"max_dd_pct": round(min(drawdown), 2)}, "vol": {}, "arima": {},
-              "garch": {}, "hmm": {}, "fcast": {}, "levels": {},
-              "charts": {"history": {"dates": [bar["time"] for bar in bars[-80:]],
-                                     "close": close[-80:]},
-                         "drawdown": {"dates": [bar["time"] for bar in bars],
-                                      "values": drawdown},
-                         "regime": [], "probability_cone": None,
-                         "return_distribution": None}}
-    return report, {"generated": [], "skipped": {"all": "Demo không chạy quant-core"}}
 
 
 def process_one():

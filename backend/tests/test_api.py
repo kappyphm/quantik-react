@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 TEST_DIR = tempfile.TemporaryDirectory()
 os.environ['QUANTIK_DB_PATH'] = str(Path(TEST_DIR.name) / 'test.sqlite')
-os.environ['QUANTIK_ALLOW_DEMO'] = 'true'
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
@@ -26,20 +25,19 @@ class ApiQueueTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         init_db()
-        bars = [
-            {'time': '2026-09-18', 'open': 100, 'high': 103, 'low': 99, 'close': 102, 'volume': 1000},
-            {'time': '2026-09-21', 'open': 102, 'high': 105, 'low': 101, 'close': 104, 'volume': 1200},
-        ]
-        summary = {'symbol': 'FPT', 'name': 'FPT', 'exchange': 'HOSE', 'recommendation': 'MUA',
+        bars = [{'time': (date(2026, 8, 1) + timedelta(days=index)).isoformat(),
+                 'open': 100 + index, 'high': 103 + index, 'low': 99 + index,
+                 'close': 102 + index, 'volume': 1000 + index} for index in range(35)]
+        summary = {'symbol': 'FPT', 'name': 'FPT', 'exchange': 'HOSE', 'recommendation': 'THEO DÕI',
                    'gate_pass': True, 'gate_explanation': 'Đạt', 'score': 89, 'rating': 'Tích cực',
                    'hold_plan': '2–6 tháng', 'vni_trend': 'Tăng', 'sector': 'Công nghệ',
-                   'sector_trend': 'Tăng'}
+                   'sector_trend': 'Tăng', 'analysis_status': 'completed'}
         with connect(write=True) as db:
-            db.execute("INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at,data_as_of,universe_count,analyzed_count,index_json) VALUES ('DEMO-TEST','2026-09-21','POST_CLOSE',1,'published',?,?,?,?,?,?)",
-                       (now(), now(), '2026-09-21', 1, 1, dumps(bars)))
+            db.execute("INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at,data_as_of,universe_count,analyzed_count,index_json) VALUES ('FIXTURE-TEST','2026-09-21','POST_CLOSE',1,'published',?,?,?,?,?,?)",
+                       (now(), now(), bars[-1]['time'], 1, 1, dumps(bars)))
             db.execute("INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json) VALUES (?,?,?,?,?)",
-                       ('DEMO-TEST', 'FPT', dumps(summary), dumps(summary), dumps(bars)))
-            db.execute("INSERT INTO publication(key,run_id) VALUES ('latest','DEMO-TEST')")
+                       ('FIXTURE-TEST', 'FPT', dumps(summary), dumps(summary), dumps(bars)))
+            db.execute("INSERT INTO publication(key,run_id) VALUES ('latest','FIXTURE-TEST')")
 
     def test_scan_job_and_report_reopen(self):
         with TestClient(app) as client:
@@ -57,40 +55,41 @@ class ApiQueueTest(unittest.TestCase):
                 db.execute("INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at,data_as_of) VALUES ('NEW-TEST','2026-09-22','PRE_OPEN',1,'published',?,?,?)",
                            (now(), now(), '2026-09-22'))
                 db.execute("UPDATE publication SET run_id='NEW-TEST' WHERE key='latest'")
-            self.assertTrue(process_one())
+            fake_report = {'symbol': 'FPT', 'as_of': '2026-09-04',
+                           'data_source_mode': 'published_scan_snapshot'}
+            with patch.object(worker, 'quant_from_snapshot',
+                              return_value=(fake_report, {'generated': [], 'skipped': {}}, [])):
+                self.assertTrue(process_one())
             job = client.get(f"/api/v1/quant/jobs/{created['job_id']}").json()
             self.assertEqual(job['status'], 'succeeded')
             report = client.get(f"/api/v1/quant/reports/{created['job_id']}").json()
-            self.assertEqual(report['analysis_mode'], 'synthetic_demo')
-            self.assertEqual(report['reference_run_id'], 'DEMO-TEST')
+            self.assertEqual(report['analysis_mode'], 'quant_core')
+            self.assertEqual(report['reference_run_id'], 'FIXTURE-TEST')
             self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 1)
             self.assertEqual(client.get('/api/v1/quant/reports').json()['total'], 1)
-            self.assertEqual(client.get('/api/v1/admin/scan-runs/DEMO-TEST/results').status_code, 403)
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results').status_code, 403)
             os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'
             headers = {'X-Admin-Key': 'test-admin-only'}
-            self.assertEqual(client.get('/api/v1/admin/scan-runs/DEMO-TEST/results', headers=headers).json()['total'], 1)
-            self.assertEqual(client.get('/api/v1/admin/scan-runs/DEMO-TEST/results/FPT', headers=headers).json()['symbol'], 'FPT')
-            self.assertEqual(client.get(f"/api/v1/admin/quant/reports/{created['job_id']}", headers=headers).json()['analysis_mode'], 'synthetic_demo')
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results', headers=headers).json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results/FPT', headers=headers).json()['symbol'], 'FPT')
+            self.assertEqual(client.get(f"/api/v1/admin/quant/reports/{created['job_id']}", headers=headers).json()['analysis_mode'], 'quant_core')
             with client.stream('GET', f"/api/v1/quant/jobs/{created['job_id']}/events") as response:
                 response.read()
                 self.assertIn('event: job.succeeded', response.text)
-            os.environ['QUANTIK_ALLOW_DEMO'] = 'false'
-            self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 0)
-            self.assertEqual(client.get('/api/v1/quant/reports').json()['total'], 0)
-            os.environ['QUANTIK_ALLOW_DEMO'] = 'true'
+            self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/quant/reports').json()['total'], 1)
 
-    def test_demo_publication_requires_explicit_opt_in(self):
-        previous = os.environ.get('QUANTIK_ALLOW_DEMO')
-        os.environ['QUANTIK_ALLOW_DEMO'] = 'false'
+    def test_demo_publication_is_never_public(self):
         try:
+            with connect(write=True) as db:
+                db.execute("INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at) VALUES ('DEMO-TEST','2026-09-21','MANUAL',1,'published',?,?)", (now(), now()))
+                db.execute("UPDATE publication SET run_id='DEMO-TEST' WHERE key='latest'")
             with TestClient(app) as client:
                 self.assertEqual(client.get('/api/v1/scans/latest').status_code, 404)
                 self.assertEqual(client.get('/api/v1/scans/status').status_code, 200)
         finally:
-            if previous is None:
-                os.environ.pop('QUANTIK_ALLOW_DEMO', None)
-            else:
-                os.environ['QUANTIK_ALLOW_DEMO'] = previous
+            with connect(write=True) as db:
+                db.execute("UPDATE publication SET run_id='FIXTURE-TEST' WHERE key='latest'")
 
     def test_request_id_and_public_source_error_are_safe(self):
         with TestClient(app) as client:
@@ -205,7 +204,7 @@ class ApiQueueTest(unittest.TestCase):
         bars = [{'time': (date(2026, 3, 1) + timedelta(days=index)).isoformat(),
                  'open': 100 + index, 'high': 102 + index, 'low': 99 + index,
                  'close': 101 + index, 'volume': 1000 + index} for index in range(35)]
-        summary = {'symbol': 'FPT', 'exchange': 'HOSE', 'recommendation': 'MUA',
+        summary = {'symbol': 'FPT', 'exchange': 'HOSE', 'recommendation': 'THEO DÕI',
                    'analysis_status': 'completed'}
         with connect(write=True) as db:
             db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at,
@@ -228,7 +227,7 @@ class ApiQueueTest(unittest.TestCase):
                 self.assertEqual(report['reference_run_id'], 'REAL-SNAPSHOT')
         finally:
             with connect(write=True) as db:
-                db.execute("UPDATE publication SET run_id='DEMO-TEST' WHERE key='latest'")
+                db.execute("UPDATE publication SET run_id='FIXTURE-TEST' WHERE key='latest'")
 
 
 if __name__ == '__main__':

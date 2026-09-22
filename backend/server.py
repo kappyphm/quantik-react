@@ -83,7 +83,7 @@ def admin_or_403(x_admin_key: str | None):
 def latest_run(db):
     row = db.execute("""SELECT r.* FROM scan_runs r JOIN publication p ON p.run_id=r.id
                         WHERE p.key='latest' AND r.status='published'""").fetchone()
-    if not row or (row["id"].startswith("DEMO-") and os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() != "true"):
+    if not row or row["id"].startswith("DEMO-"):
         raise HTTPException(404, detail={"code": "NO_PUBLISHED_SCAN", "message": "Chưa có bản quét được công bố"})
     return row
 
@@ -268,7 +268,7 @@ def create_quant_job(body: QuantRequest, request: Request,
         if not result:
             raise HTTPException(404, "Mã chưa có trong bản quét")
         summary, bars = loads(result["summary_json"], {}), loads(result["ohlcv_json"], [])
-        if not run["id"].startswith("DEMO-") and (summary.get("analysis_status") != "completed" or len(bars) < 30):
+        if summary.get("analysis_status") != "completed" or len(bars) < 30:
             raise HTTPException(409, detail={"code": "ANALYSIS_UNAVAILABLE",
                                              "message": summary.get("gate_explanation") or "Mã không đủ điều kiện chạy QUANT"})
     try:
@@ -289,15 +289,14 @@ def list_quant_jobs(request: Request, symbol: str | None = None, page: int = 1, 
         raise HTTPException(422, "page/page_size không hợp lệ")
     if symbol:
         symbol = symbol_or_400(symbol)
-    allow_demo = int(os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() == "true")
     with connect() as db:
         rows = db.execute("""SELECT * FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
-                             AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')
+                             AND COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'
                              ORDER BY created_at DESC LIMIT ? OFFSET ?""",
-                          (owner, symbol, symbol, allow_demo, page_size, (page - 1) * page_size)).fetchall()
+                          (owner, symbol, symbol, page_size, (page - 1) * page_size)).fetchall()
         total = db.execute("""SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
-                              AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')""",
-                           (owner, symbol, symbol, allow_demo)).fetchone()[0]
+                              AND COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'""",
+                           (owner, symbol, symbol)).fetchone()[0]
     return {"items": [public_job(row) for row in rows], "total": total, "page": page, "page_size": page_size}
 
 
@@ -357,13 +356,12 @@ def list_reports(request: Request, symbol: str | None = None):
     owner = owner_or_401(request)
     if symbol:
         symbol = symbol_or_400(symbol)
-    allow_demo = int(os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() == "true")
     with connect() as db:
         rows = db.execute("""SELECT * FROM jobs WHERE kind='quant' AND status='succeeded' AND owner=?
                              AND (? IS NULL OR symbol=?)
-                             AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')
+                             AND COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'
                              ORDER BY finished_at DESC""",
-                          (owner, symbol, symbol, allow_demo)).fetchall()
+                          (owner, symbol, symbol)).fetchall()
     return {"items": [public_job(row) for row in rows], "total": len(rows)}
 
 

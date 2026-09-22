@@ -17,7 +17,6 @@ def main():
     with tempfile.TemporaryDirectory(prefix="quantik-live-smoke-") as directory:
         os.environ["QUANTIK_DB_PATH"] = str(Path(directory) / "smoke.sqlite")
         os.environ["QUANTIK_ARTIFACT_ROOT"] = str(Path(directory) / "artifacts")
-        os.environ["QUANTIK_ALLOW_DEMO"] = "false"
         from fastapi.testclient import TestClient
         from engine import scan_all
         from server import app

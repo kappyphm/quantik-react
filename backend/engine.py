@@ -242,16 +242,3 @@ def quant_from_snapshot(symbol, bars, index_bars, exchange, progress, output_dir
     progress("fetch", 12, "Đọc OHLCV và VN-Index từ snapshot đã công bố")
     return _quant_with_frames(symbol, frame_from_bars(bars), frame_from_bars(index_bars), exchange,
                               progress, output_dir, include_backtest, "published_scan_snapshot")
-
-
-def quant_one(symbol, progress, output_dir: Path, include_backtest=True):
-    from quant_engine.quant import ScreenerBridge
-    bridge = ScreenerBridge()
-    progress("fetch", 12, "Đang tải OHLCV và VN-Index")
-    data = bridge.fetch_ohlcv([symbol], days=252)
-    if symbol not in data:
-        raise RuntimeError(f"Không lấy được OHLCV cho {symbol}")
-    index = bridge.fetch_index("VNINDEX", days=252)
-    exchange = bridge.fetch_exchange_map([symbol]).get(symbol, "UNKNOWN")
-    return _quant_with_frames(symbol, data[symbol], index, exchange, progress, output_dir,
-                              include_backtest, "live_fetch")
