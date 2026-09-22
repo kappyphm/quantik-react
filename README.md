@@ -68,6 +68,17 @@ docker compose ps
 
 Mở `http://localhost:8080` (đổi bằng `QUANTIK_WEB_PORT` trong môi trường host). Compose chạy riêng `web`, `api`, `worker`, `scheduler`; SQLite, checkpoint và biểu đồ nằm trong volume `quantik-data`. Nginx phục vụ React và chuyển tiếp `/api`, gồm cả SSE. Xem log bằng `docker compose logs -f api worker scheduler`; dừng bằng `docker compose down`. Không thêm `-v` khi dừng nếu muốn giữ database và checkpoint.
 
+Backup nóng database cùng kho biểu đồ, kiểm tra checksum, và thử restore vào thư mục cô lập:
+
+```bat
+cd backend
+.venv\Scripts\python.exe maintenance.py backup data\backups\quantik.zip
+.venv\Scripts\python.exe maintenance.py verify data\backups\quantik.zip
+.venv\Scripts\python.exe maintenance.py restore data\backups\quantik.zip data\restore-test
+```
+
+Lệnh `restore` luôn từ chối thư mục không rỗng và không ghi đè database đang chạy. Sau khi xác nhận `sqlite_integrity=ok`, việc thay database live cần dừng API/worker/scheduler và là thao tác vận hành riêng.
+
 Nếu backend không sẵn sàng, giao diện báo lỗi kết nối. Bản demo đã được lưu tại tag Git `demo-stable-2026-09-22`.
 
 ## Endpoint chính
