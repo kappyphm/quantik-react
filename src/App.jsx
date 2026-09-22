@@ -59,7 +59,7 @@ export default function App() {
     : path === '/' ? <Home go={go} apiReady={apiReady} />
     : path === '/scan' ? <Scan go={go} apiReady={apiReady} />
     : path.startsWith('/stocks/') ? <Detail symbol={decodeURIComponent(path.split('/')[2]).toUpperCase()} go={go} startJob={startJob} jobs={jobs} apiReady={apiReady} />
-    : path.startsWith('/quant/jobs/') ? <JobDetail id={path.split('/')[3]} jobs={jobs} go={go} apiReady={apiReady} />
+    : path.startsWith('/quant/jobs/') ? <JobDetail id={path.split('/')[3]} jobs={jobs} go={go} apiReady={apiReady} startJob={startJob} />
     : path === '/quant/reports' ? <Reports jobs={jobs} go={go} apiReady={apiReady} />
     : path === '/admin' ? <Admin />
     : <div className="page not-found"><h1>Không có dữ liệu cho đường dẫn này.</h1><button className="primary" onClick={() => go('/scan')}>VỀ KẾT QUẢ QUÉT ↗</button></div>;

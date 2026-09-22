@@ -40,9 +40,11 @@ function LiveQuantReport({ symbol, jobId }) {
   return <section className="report-section"><div className="section-title"><span>BÁO CÁO QUANT / {symbol}</span><small>PHÂN TÍCH QUANT-CORE · DỮ LIỆU ĐẾN {r.as_of}</small></div><div className="report-hero"><div><span>ĐIỂM QUANT</span><strong>{r.score ?? '—'}<small> / 100</small></strong></div><div><span>QUYẾT ĐỊNH</span><strong>{r.action || '—'}</strong></div><div><span>ĐÁNH GIÁ</span><strong>{r.rating || '—'}</strong></div><div><span>LỢI NHUẬN DỰ BÁO</span><strong>{r.fcast?.ensemble_ret_pct ?? '—'}%</strong></div></div><QuantDiagnostics report={r} /><Backtest result={r.backtest} /><div className="quant-artifacts">{r.chart_manifest?.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">Biểu đồ {item.kind} ↗</a>)}</div></section>;
 }
 
-export function JobDetail({ id, go }) {
+export function JobDetail({ id, go, startJob }) {
   const [job, setJob] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [actionBusy, setActionBusy] = useState(false);
   useEffect(() => {
     let active = true;
     let stream;
@@ -62,10 +64,20 @@ export function JobDetail({ id, go }) {
     ['job.progress', 'job.succeeded', 'job.failed', 'job.cancelled'].forEach(name => stream.addEventListener(name, onProgress));
     return () => { active = false; clearInterval(timer); stream.close(); };
   }, [id]);
+  const cancelJob = async () => {
+    setActionBusy(true); setActionError('');
+    try {
+      const response = await fetch(`/api/v1/quant/jobs/${id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail?.message || data.detail || 'Không hủy được job');
+      setJob(old => ({ ...old, status: 'cancelled', phase: 'cancelled', finished_at: new Date().toISOString() }));
+    } catch (error) { setActionError(error.message); }
+    finally { setActionBusy(false); }
+  };
   if (!job) return <div className="page not-found"><h1>{loadError || 'Đang tải job…'}</h1><button className="primary" onClick={() => go('/quant/reports')}>XEM LỊCH SỬ ↗</button></div>;
   const p = { status: job.status, phase: job.phase, pct: job.progress_pct,
     label: labels[job.phase] || job.phase, step: Math.max(0, phaseOrder.indexOf(job.phase)) };
-  return <div className="page job-page"><button className="back-link" onClick={() => go(`/stocks/${job.symbol}`)}>← Trở lại {job.symbol}</button><div className="page-heading"><div><div className="eyebrow">QUANT JOB / {job.id}</div><h1>Phân tích <span>{job.symbol}</span></h1><p>{job.symbol} · Tạo lúc {fmt(job.requested_at)}</p></div><span className={`job-status ${p.status === 'succeeded' ? 'complete' : ''}`}>{p.status === 'succeeded' ? '✓ HOÀN TẤT' : p.status === 'failed' ? '× THẤT BẠI' : p.status === 'cancelled' ? 'ĐÃ HỦY' : p.status === 'queued' ? '◷ ĐANG CHỜ' : '◉ ĐANG XỬ LÝ'}</span></div><div className="job-grid"><section className="analysis-panel progress-panel"><div className="section-title"><span>TIẾN ĐỘ PHÂN TÍCH</span><small>TỪ WORKER · SSE</small></div><div className="progress-number">{p.pct}<span>%</span></div><div className="progress-track"><i style={{ width: `${p.pct}%` }} /></div><p role="status" aria-live="polite">{job.error || p.label}</p><div className="phase-list">{phases.map(([key, label], index) => { const done = p.status === 'succeeded' || p.step > phaseOrder.indexOf(key), current = !done && p.phase === key; return <div className={done ? 'finished' : current ? 'current' : ''} key={key}><span>{String(index + 1).padStart(2, '0')}</span><b>{label}</b><small>{done ? '✓' : current ? 'Đang chạy' : 'Chờ'}</small></div>; })}</div></section><aside className="analysis-panel job-aside"><div className="section-title"><span>THÔNG TIN TÁC VỤ</span></div><div className="text-grid"><span>Mã</span><strong>{job.symbol}</strong><span>Job ID</span><strong>{job.id}</strong><span>Bắt đầu</span><strong>{fmt(job.requested_at)}</strong><span>Nguồn tham chiếu</span><strong>{job.reference_run_id || 'Bản quét đã công bố'}</strong><span>Kiểm định phân phối</span><strong>Trong báo cáo Python</strong></div><p className="info-note">Bạn có thể rời trang và mở lại từ “Báo cáo của tôi”. Tiến độ và kết quả được lưu trên server.</p></aside></div>{p.status === 'succeeded' && <LiveQuantReport symbol={job.symbol} jobId={job.id} />}</div>;
+  return <div className="page job-page"><button className="back-link" onClick={() => go(`/stocks/${job.symbol}`)}>← Trở lại {job.symbol}</button><div className="page-heading"><div><div className="eyebrow">QUANT JOB / {job.id}</div><h1>Phân tích <span>{job.symbol}</span></h1><p>{job.symbol} · Tạo lúc {fmt(job.requested_at)}</p></div><div className="job-head-actions"><span className={`job-status ${p.status === 'succeeded' ? 'complete' : ''}`}>{p.status === 'succeeded' ? '✓ HOÀN TẤT' : p.status === 'failed' ? '× THẤT BẠI' : p.status === 'cancelled' ? 'ĐÃ HỦY' : p.status === 'queued' ? '◷ ĐANG CHỜ' : '◉ ĐANG XỬ LÝ'}</span>{p.status === 'queued' && <button disabled={actionBusy} onClick={cancelJob}>HỦY JOB</button>}{p.status === 'failed' && <button className="primary" disabled={actionBusy} onClick={() => startJob(job.symbol)}>CHẠY LẠI ↗</button>}</div></div>{actionError && <p className="admin-message" role="alert">{actionError}</p>}<div className="job-grid"><section className="analysis-panel progress-panel"><div className="section-title"><span>TIẾN ĐỘ PHÂN TÍCH</span><small>TỪ WORKER · SSE</small></div><div className="progress-number">{p.pct}<span>%</span></div><div className="progress-track"><i style={{ width: `${p.pct}%` }} /></div><p role="status" aria-live="polite">{job.error || p.label}</p><div className="phase-list">{phases.map(([key, label], index) => { const done = p.status === 'succeeded' || p.step > phaseOrder.indexOf(key), current = !done && p.phase === key; return <div className={done ? 'finished' : current ? 'current' : ''} key={key}><span>{String(index + 1).padStart(2, '0')}</span><b>{label}</b><small>{done ? '✓' : current ? 'Đang chạy' : 'Chờ'}</small></div>; })}</div></section><aside className="analysis-panel job-aside"><div className="section-title"><span>THÔNG TIN TÁC VỤ</span></div><div className="text-grid"><span>Mã</span><strong>{job.symbol}</strong><span>Job ID</span><strong>{job.id}</strong><span>Bắt đầu</span><strong>{fmt(job.requested_at)}</strong><span>Nguồn tham chiếu</span><strong>{job.reference_run_id || 'Bản quét đã công bố'}</strong><span>Kiểm định phân phối</span><strong>Trong báo cáo Python</strong></div><p className="info-note">Bạn có thể rời trang và mở lại từ “Báo cáo của tôi”. Tiến độ và kết quả được lưu trên server.</p></aside></div>{p.status === 'succeeded' && <LiveQuantReport symbol={job.symbol} jobId={job.id} />}</div>;
 }
 
 export function Reports({ jobs, go }) {
