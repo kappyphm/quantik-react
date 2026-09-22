@@ -9,7 +9,7 @@ export default function Home({go,apiReady=false}){
     <div className="home-copy"><div className="eyebrow"><span className="eyebrow-line"/> QUANTIK / VIETNAM EQUITIES</div>
       <h1>Nhìn toàn sàn.<br/><em>Hiểu từng mã.</em></h1>
       <p className="hero-desc">Một điểm đến cho kết quả sàng lọc và phân tích định lượng cổ phiếu Việt Nam. Theo dõi bối cảnh thị trường, mở bản quét mới nhất và đi sâu vào từng mã.</p>
-      <button className="primary big-cta" onClick={()=>go('/scan')}>QUÉT TOÀN SÀN <span>↗</span></button>
+      <button className="primary big-cta" onClick={()=>go('/scan')}>XEM BẢN QUÉT TOÀN SÀN <span>↗</span></button>
       <div className="home-meta"><span>ĐỢT CÔNG BỐ GẦN NHẤT</span><strong>{latest?.published_at?.slice(0,16).replace('T',' ')||'Chưa có'}</strong><span className="meta-sep"/><span>{latest?.universe_count??scanStatus?.universe_count??'—'} MÃ {latest?'TRONG BẢN QUÉT':'TRONG UNIVERSE ĐANG QUÉT'}</span>{scanStatus?.status==='running'&&<span> · ĐANG QUÉT THẬT {scanStatus.progress_pct}%</span>}{scanStatus?.status==='failed'&&<span> · QUÉT LỖI</span>}</div>
     </div>
     <MarketBoard apiReady={apiReady}/>
