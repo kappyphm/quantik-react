@@ -8,7 +8,7 @@ Danh sách thay đổi có chủ đích và cách kiểm tra bất biến nằm 
 
 ## Chạy với dữ liệu Vnstock
 
-Các lệnh sau dành cho **Windows Command Prompt (CMD)**, chạy từ thư mục gốc `D:\20_Workspace\1_software\quantik-react`. Đã kiểm thử với Python 3.13, Node và pnpm. Nếu `backend\.venv` đã tồn tại thì **bỏ qua việc tạo lại**; không chạy `python -m venv` khi API/worker đang dùng môi trường đó.
+Các lệnh sau dành cho **Windows Command Prompt (CMD)**, chạy từ thư mục gốc `D:\20_Workspace\1_software\quantik-react`. Đã kiểm thử với Python 3.13, Node và pnpm. `backend/requirements.txt` khóa đúng phiên bản runtime đã qua test và được dùng đồng nhất ở local, Docker và CI. Nếu `backend\.venv` đã tồn tại thì **bỏ qua việc tạo lại**; không chạy `python -m venv` khi API/worker đang dùng môi trường đó.
 
 Nếu dùng Vnstock API key, tạo `.env` từ `.env-template` (chỉ cần một lần), rồi thay giá trị mẫu trong `.env`:
 

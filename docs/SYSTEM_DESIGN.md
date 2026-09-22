@@ -247,7 +247,7 @@ Giữ token màu từ `src/styles.css` (`--bg`, `--panel`, `--amber`, `--up`, `-
 
 ## 9. Gói và dịch vụ đề xuất
 
-Các dòng dưới đây là **danh mục cài đặt**, chưa khóa phiên bản chính xác. Khi bắt đầu code, khóa phiên bản tương thích bằng lockfile và chạy CI; không nâng đồng loạt theo `>=` như `backend/requirements.txt` hiện tại.
+Các dòng dưới đây là danh mục thành phần. Phiên bản runtime chính xác đã được khóa trong `backend/requirements.txt`; mọi thay đổi dependency phải chạy lại toàn bộ CI trước khi phát hành.
 
 ### 9.1 Backend Python
 
