@@ -3,11 +3,19 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from engine import analysis_status
+from engine import analysis_status, resolve_universe
 from worker import validate_scan_result
 
 
 class ScanStatusTest(unittest.TestCase):
+    def test_universe_keeps_exchange_for_failed_symbols(self):
+        class Provider:
+            def get_stock_list(self, exchange):
+                return {'HOSE': ['FPT', 'DUP'], 'HNX': ['DUP', 'IDC'], 'UPCOM': ['ABB']}[exchange]
+        universe, exchanges = resolve_universe(provider=Provider())
+        self.assertEqual(universe, ['FPT', 'DUP', 'IDC', 'ABB'])
+        self.assertEqual(exchanges, {'FPT': 'HOSE', 'DUP': 'HOSE', 'IDC': 'HNX', 'ABB': 'UPCOM'})
+
     def test_liquidity_rejection_is_not_processing_failure(self):
         self.assertEqual(analysis_status(None), 'completed')
         self.assertEqual(analysis_status('Liquidity gate failed'), 'screened_out')

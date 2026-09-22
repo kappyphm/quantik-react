@@ -64,16 +64,30 @@ def analysis_status(error: str | None) -> str:
     return "failed"
 
 
+def resolve_universe(symbols=None, provider=None):
+    exchanges = {}
+    if symbols is None:
+        if provider is None:
+            from quant_engine.crawl_data import DataProvider
+            provider = DataProvider()
+        symbols = []
+        for exchange in ("HOSE", "HNX", "UPCOM"):
+            listed = provider.get_stock_list(exchange)
+            symbols.extend(listed)
+            for symbol in listed:
+                exchanges.setdefault(str(symbol).upper(), exchange)
+    universe = list(dict.fromkeys(str(symbol).upper() for symbol in symbols
+                                  if re.fullmatch(r"[A-Z0-9]{3,5}", str(symbol).upper())))
+    return universe, exchanges
+
+
 def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, universe_ready=None):
     """Collect all three exchanges, screen each fetched code and batch QUANT once."""
     import pandas as pd
     from quant_engine.quant import QuantPipeline, ScreenerBridge, _simplify_user_summary
 
     progress("universe", 3, "Đang lấy danh sách HOSE, HNX, UPCoM")
-    if symbols is None:
-        from quant_engine.crawl_data import DataProvider
-        symbols = DataProvider().get_stock_list("ALL")
-    universe = list(dict.fromkeys(str(symbol).upper() for symbol in symbols if re.fullmatch(r"[A-Z0-9]{3,5}", str(symbol).upper())))
+    universe, universe_exchanges = resolve_universe(symbols)
     if not universe:
         raise RuntimeError("Nguồn dữ liệu không trả danh sách mã; không công bố run rỗng")
     if universe_ready:
@@ -134,7 +148,10 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
 
     progress("quantifying", 64, f"Đang phân tích định lượng {len(data)} mã")
     index_frame = bridge.fetch_index("VNINDEX", days=252)
-    exchanges = bridge.fetch_exchange_map(list(data))
+    exchanges = dict(universe_exchanges)
+    missing_exchange = [symbol for symbol in data if symbol not in exchanges]
+    if missing_exchange:
+        exchanges.update(bridge.fetch_exchange_map(missing_exchange))
     pipeline = QuantPipeline()
     screener_rows = [{"Mã CK": sym, "Tín hiệu": item.get("assessment", {}).get("overall_signal", "")}
                      for sym, item in screening.items() if "assessment" in item]
@@ -168,7 +185,8 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
         }
         detail = {**summary, "raw_action": action, "screener": screening.get(symbol, {}),
                   "quant": clean(report) if report else {}, "commentary": row.get("Analysis") or "",
-                  "error": error, "source_meta": {"ohlcv": data[symbol].attrs.get("source") if symbol in data else None}}
+                  "error": error, "listing_status": "listed",
+                  "source_meta": {"ohlcv": data[symbol].attrs.get("source") if symbol in data else None}}
         results.append((summary, detail, bars_from_frame(data[symbol]) if symbol in data else []))
     return {"universe_count": len(universe),
             "analyzed_count": sum(r[0]["analysis_status"] in ("completed", "screened_out") for r in results),
