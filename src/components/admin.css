@@ -1,10 +1,11 @@
 .admin-unlock,.admin-toolbar{border:1px solid var(--line);background:var(--surface);padding:22px;margin-bottom:22px}
 .admin-unlock{max-width:520px;display:grid;gap:15px}
-.admin-unlock label,.admin-toolbar label{display:grid;gap:7px;color:var(--muted);font-size:12px}
-.admin-unlock input,.admin-toolbar input,.admin-toolbar select{background:var(--raised);border:1px solid var(--line);color:var(--text);padding:10px}
+.admin-unlock label,.admin-toolbar label,.calendar-form label{display:grid;gap:7px;color:var(--muted);font-size:12px}
+.admin-unlock input,.admin-toolbar input,.admin-toolbar select,.calendar-form input,.calendar-form select{background:var(--raised);border:1px solid var(--line);color:var(--text);padding:10px}
 .admin-unlock small{color:var(--faint)}
 .admin-toolbar{display:flex;justify-content:space-between;gap:18px;align-items:flex-end}
 .admin-toolbar form{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.calendar-form{display:grid;grid-template-columns:minmax(150px,1fr) minmax(180px,1fr) minmax(240px,2fr) auto;align-items:end;gap:12px;padding:14px}
 .admin-toolbar>button,.admin-table button{background:var(--raised);border:1px solid var(--line);color:var(--amber);padding:8px 10px;white-space:nowrap}
 .admin-table-wrap{overflow:auto}
 .admin-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
@@ -17,4 +18,4 @@
 .admin-audit>div{display:flex;gap:18px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--line);font:11px 'IBM Plex Mono';color:var(--muted)}
 .admin-audit b{color:var(--amber)}
 .admin-message{position:sticky;bottom:10px;background:#35231e;border:1px solid var(--red);padding:12px;color:var(--red)}
-@media(max-width:720px){.admin-toolbar{display:block}.admin-toolbar>button{margin-top:12px}.site-header nav button{font-size:10px}}
+@media(max-width:720px){.admin-toolbar{display:block}.admin-toolbar>button{margin-top:12px}.calendar-form{grid-template-columns:1fr}.site-header nav button{font-size:10px}}

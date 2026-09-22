@@ -392,6 +392,11 @@ class ScanRequest(BaseModel):
     rerun_of: str | None = None
 
 
+class CalendarRequest(BaseModel):
+    is_trading_day: bool
+    reason: str = Field(min_length=2, max_length=200)
+
+
 def audit_admin(action: str, target_id: str, actor: str):
     with connect(write=True) as db:
         db.execute("INSERT INTO admin_audit(action,target_id,actor,created_at) VALUES (?,?,?,?)",
@@ -505,6 +510,47 @@ def admin_audit(x_admin_key: str | None = Header(default=None)):
     with connect() as db:
         rows = db.execute("SELECT * FROM admin_audit ORDER BY id DESC LIMIT 100").fetchall()
     return {"items": [dict(row) for row in rows]}
+
+
+@app.get("/api/v1/admin/calendar")
+def admin_calendar(x_admin_key: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    with connect() as db:
+        rows = db.execute("SELECT * FROM trading_calendar ORDER BY trading_date DESC LIMIT 200").fetchall()
+    return {"items": [dict(row) | {"is_trading_day": bool(row["is_trading_day"])} for row in rows]}
+
+
+@app.put("/api/v1/admin/calendar/{trading_date}")
+def admin_set_calendar(trading_date: str, body: CalendarRequest,
+                       x_admin_key: str | None = Header(default=None),
+                       x_admin_actor: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    try:
+        datetime.strptime(trading_date, "%Y-%m-%d")
+    except ValueError as exc:
+        raise HTTPException(422, "Ngày không hợp lệ") from exc
+    actor = (x_admin_actor or "admin-key")[:80]
+    with connect(write=True) as db:
+        db.execute("""INSERT INTO trading_calendar(trading_date,is_trading_day,reason,actor,updated_at)
+                      VALUES (?,?,?,?,?) ON CONFLICT(trading_date) DO UPDATE SET
+                      is_trading_day=excluded.is_trading_day,reason=excluded.reason,
+                      actor=excluded.actor,updated_at=excluded.updated_at""",
+                   (trading_date, int(body.is_trading_day), body.reason.strip(), actor, now()))
+    audit_admin("calendar.set", trading_date, actor)
+    return {"trading_date": trading_date, "is_trading_day": body.is_trading_day,
+            "reason": body.reason.strip()}
+
+
+@app.delete("/api/v1/admin/calendar/{trading_date}")
+def admin_delete_calendar(trading_date: str, x_admin_key: str | None = Header(default=None),
+                          x_admin_actor: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    with connect(write=True) as db:
+        deleted = db.execute("DELETE FROM trading_calendar WHERE trading_date=?", (trading_date,)).rowcount
+    if not deleted:
+        raise HTTPException(404, "Không có override cho ngày này")
+    audit_admin("calendar.delete", trading_date, x_admin_actor or "admin-key")
+    return {"deleted": True}
 
 
 @app.get("/api/v1/admin/quant/reports/{job_id}")

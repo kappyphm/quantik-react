@@ -23,7 +23,10 @@ def tick(current=None):
     current = current or datetime.now(ZONE)
     date = current.date().isoformat()
     holidays = {item.strip() for item in os.getenv("QUANTIK_HOLIDAYS", "").split(",") if item.strip()}
-    if current.weekday() >= 5 or date in holidays:
+    with connect() as db:
+        override = db.execute("SELECT is_trading_day FROM trading_calendar WHERE trading_date=?", (date,)).fetchone()
+    is_trading_day = bool(override["is_trading_day"]) if override else current.weekday() < 5 and date not in holidays
+    if not is_trading_day:
         return
     slots = (("PRE_OPEN", os.getenv("QUANTIK_PRE_OPEN_TIME", "07:00")),
              ("POST_CLOSE", os.getenv("QUANTIK_POST_CLOSE_TIME", "16:20")))

@@ -134,6 +134,11 @@ class ApiQueueTest(unittest.TestCase):
             audit = client.get('/api/v1/admin/audit', headers=headers).json()['items']
             self.assertTrue(any(item['action'] == 'scan.create' and item['target_id'] == run_id for item in audit))
             self.assertTrue(any(item['action'] == 'job.retry' and item['target_id'] == retried.json()['job_id'] for item in audit))
+            calendar = client.put('/api/v1/admin/calendar/2026-09-23',
+                                  json={'is_trading_day': False, 'reason': 'Ngày nghỉ kiểm thử'}, headers=headers)
+            self.assertEqual(calendar.status_code, 200)
+            self.assertFalse(client.get('/api/v1/admin/calendar', headers=headers).json()['items'][0]['is_trading_day'])
+            self.assertEqual(client.delete('/api/v1/admin/calendar/2026-09-23', headers=headers).status_code, 200)
             with connect(write=True) as db:
                 db.execute("UPDATE jobs SET status='cancelled' WHERE status='queued'")
 

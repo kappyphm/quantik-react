@@ -107,6 +107,10 @@ def init_db():
           id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL,
           target_id TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS trading_calendar (
+          trading_date TEXT PRIMARY KEY, is_trading_day INTEGER NOT NULL,
+          reason TEXT NOT NULL, actor TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
         """)
         columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         if "heartbeat_at" not in columns:

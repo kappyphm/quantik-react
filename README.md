@@ -51,7 +51,7 @@ pnpm dev
 .venv\Scripts\python.exe -c "from store import create_scan; from datetime import date; print(create_scan('MANUAL', date.today().isoformat()))"
 ```
 
-Để chạy lịch PRE_OPEN và POST_CLOSE, mở thêm một tiến trình `scheduler.py` từ `backend`. Chỉ chạy một scheduler và một worker cho SQLite.
+Để chạy lịch PRE_OPEN và POST_CLOSE, mở thêm một tiến trình `scheduler.py` từ `backend`. Chỉ chạy một scheduler và một worker cho SQLite. Scheduler dùng thứ hai–thứ sáu làm lịch mặc định; trang `/admin` cho phép ghi đè từng ngày nghỉ hoặc ngày giao dịch cuối tuần và lưu lịch này trong database.
 
 Mở `http://localhost:5173`. Vite proxy `/api` sang cổng 8000. Bảng điện gọi Vnstock qua backend; `/scan` chỉ hiển thị bản quét thật sau khi worker hoàn tất kiểm tra độ phủ và công bố. Khi chưa có bản công bố, giao diện hiển thị tiến độ từ `/api/v1/scans/status`. Snapshot `DEMO-` cũ không được phục vụ mặc định. Dữ liệu job nằm ở `backend/data/quantik.sqlite`; phiên khách dùng cookie HttpOnly.
 
@@ -91,13 +91,13 @@ Nếu backend không sẵn sàng, giao diện báo lỗi kết nối. Bản demo
 - `GET /api/v1/scans/latest`, `/results`, `/facets`, `/results/{symbol}`, `/results/{symbol}/ohlcv`: bản quét mới nhất, lọc và phân trang trên API.
 - `POST /api/v1/quant/jobs`, `GET /api/v1/quant/jobs`, `GET /api/v1/quant/jobs/{id}`, `GET /api/v1/quant/jobs/{id}/events`: hàng đợi bền vững và tiến độ SSE.
 - `GET /api/v1/quant/reports/{id}` và `/artifacts/{artifact_id}`: báo cáo và biểu đồ.
-- `GET /api/v1/admin/session`, `POST /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs/{id}/results` và `/results/{symbol}`, `GET /api/v1/admin/jobs`, `POST /api/v1/admin/jobs/{id}/retry`, `GET /api/v1/admin/audit`: vận hành và tra cứu lịch sử; yêu cầu header `X-Admin-Key` và biến môi trường `QUANTIK_ADMIN_KEY`.
+- `GET /api/v1/admin/session`, `POST /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs/{id}/results` và `/results/{symbol}`, `GET /api/v1/admin/jobs`, `POST /api/v1/admin/jobs/{id}/retry`, `GET /api/v1/admin/calendar`, `PUT/DELETE /api/v1/admin/calendar/{date}`, `GET /api/v1/admin/audit`: vận hành, lịch giao dịch và tra cứu lịch sử; yêu cầu header `X-Admin-Key` và biến môi trường `QUANTIK_ADMIN_KEY`.
 
 OpenAPI tại `http://localhost:8000/docs`.
 
 ## Phạm vi và giới hạn hiện tại
 
-- `backend/scheduler.py` xếp job PRE_OPEN lúc 07:00 và POST_CLOSE lúc 16:20, giờ Việt Nam, ngày làm việc; ngày nghỉ phải khai báo trong `QUANTIK_HOLIDAYS=YYYY-MM-DD,...`. Một worker xử lý các job tuần tự.
+- `backend/scheduler.py` xếp job PRE_OPEN lúc 07:00 và POST_CLOSE lúc 16:20, giờ Việt Nam. Lịch ghi đè trong database có ưu tiên cao nhất; nếu không có ghi đè, scheduler dùng thứ hai–thứ sáu và loại các ngày trong `QUANTIK_HOLIDAYS=YYYY-MM-DD,...`. Một worker xử lý các job tuần tự.
 - Worker lấy OHLCV qua Vnstock với nhịp mặc định 1,5 giây trước mỗi yêu cầu (đổi bằng `QUANTIK_FETCH_INTERVAL_SECONDS`). Dữ liệu đã tải được checkpoint theo run ở `backend/data/scan_cache/`; job mất heartbeat được xếp lại để chạy tiếp. Lượt quét lại cùng ngày/slot dùng lại checkpoint của lượt gốc. Kết quả mã thiếu dữ liệu, bị loại bởi thanh khoản và lỗi xử lý được phân biệt; lượt thất bại vẫn lưu các hàng đã đánh giá để admin chẩn đoán, nhưng không thay bản công bố. Gói Community giới hạn 60 request/phút, nên một đợt 1.430 mã có thể mất nhiều thời gian.
 - Trước công bố, worker kiểm tra độ phủ (`QUANTIK_MIN_COVERAGE`, mặc định 80%), tỷ lệ mã cùng ngày dữ liệu với VN-Index (`QUANTIK_MIN_FRESH_COVERAGE`, mặc định 75%) và tuổi dữ liệu (`QUANTIK_MAX_DATA_AGE_DAYS`, mặc định 7 ngày). `POST_CLOSE` yêu cầu dữ liệu đúng ngày slot; `PRE_OPEN` yêu cầu dữ liệu của phiên trước.
 - Mỗi scan run lưu `model_version`, phiên bản gói nguồn và JSON cấu hình gate; API danh sách, chi tiết và OHLCV trả metadata này cùng `run_id`/`data_as_of` để đối chiếu và tái hiện kết quả.

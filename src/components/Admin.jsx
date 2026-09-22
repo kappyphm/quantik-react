@@ -14,8 +14,12 @@ export default function Admin() {
   const [runs, setRuns] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [calendar, setCalendar] = useState([]);
   const [slot, setSlot] = useState('MANUAL');
   const [date, setDate] = useState(today);
+  const [calendarDate, setCalendarDate] = useState(today);
+  const [calendarTrading, setCalendarTrading] = useState(false);
+  const [calendarReason, setCalendarReason] = useState('Ngày nghỉ giao dịch');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,12 +33,13 @@ export default function Admin() {
     return data;
   };
   const refresh = async () => {
-    const [runData, jobData, auditData] = await Promise.all([
-      request('scan-runs'), request('jobs'), request('audit'),
+    const [runData, jobData, auditData, calendarData] = await Promise.all([
+      request('scan-runs'), request('jobs'), request('audit'), request('calendar'),
     ]);
     setRuns(runData.items || []);
     setJobs(jobData.items || []);
     setAudit(auditData.items || []);
+    setCalendar(calendarData.items || []);
   };
   const unlock = async event => {
     event.preventDefault();
@@ -58,6 +63,20 @@ export default function Admin() {
   };
   const create = event => { event.preventDefault(); runAction('scan-runs', { slot, trading_date: date }); };
   const rerun = run => runAction('scan-runs', { slot: run.slot, trading_date: run.trading_date, rerun_of: run.id });
+  const saveCalendar = async event => {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      await request(`calendar/${calendarDate}`, { method: 'PUT', body: JSON.stringify({ is_trading_day: calendarTrading, reason: calendarReason }) });
+      await refresh();
+    } catch (reason) { setError(reason.message); }
+    finally { setBusy(false); }
+  };
+  const deleteCalendar = async tradingDate => {
+    setBusy(true); setError('');
+    try { await request(`calendar/${tradingDate}`, { method: 'DELETE' }); await refresh(); }
+    catch (reason) { setError(reason.message); }
+    finally { setBusy(false); }
+  };
 
   return <div className="page admin-page">
     <div className="page-heading"><div><div className="eyebrow">VẬN HÀNH / QUẢN TRỊ</div><h1>Trạng thái <span>hệ thống</span></h1><p>Theo dõi bản quét, hàng đợi và thao tác quản trị.</p></div></div>
@@ -65,6 +84,7 @@ export default function Admin() {
       <input type="password" autoComplete="off" value={key} onChange={event => setKey(event.target.value)} required />
     </label><button className="primary" disabled={busy}>MỞ BẢNG QUẢN TRỊ ↗</button><small>Khóa chỉ giữ trong bộ nhớ của trang này.</small></form> : <>
       <div className="admin-toolbar"><form onSubmit={create}><label>Slot <select value={slot} onChange={event => setSlot(event.target.value)}><option>MANUAL</option><option>PRE_OPEN</option><option>POST_CLOSE</option></select></label><label>Ngày giao dịch <input type="date" value={date} onChange={event => setDate(event.target.value)} required /></label><button className="primary" disabled={busy}>TẠO LƯỢT QUÉT ↗</button></form><button onClick={() => refresh().catch(reason => setError(reason.message))}>LÀM MỚI</button></div>
+      <section className="analysis-panel"><div className="section-title"><span>LỊCH GIAO DỊCH ĐẶC BIỆT</span><small>Ghi đè lịch thứ hai–thứ sáu mặc định</small></div><form className="calendar-form" onSubmit={saveCalendar}><label>Ngày <input type="date" value={calendarDate} onChange={event => setCalendarDate(event.target.value)} required /></label><label>Trạng thái <select value={calendarTrading ? 'open' : 'closed'} onChange={event => setCalendarTrading(event.target.value === 'open')}><option value="closed">NGHỈ GIAO DỊCH</option><option value="open">CÓ GIAO DỊCH</option></select></label><label>Lý do <input value={calendarReason} minLength="2" maxLength="200" onChange={event => setCalendarReason(event.target.value)} required /></label><button className="primary" disabled={busy}>LƯU NGÀY</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Ngày</th><th>Trạng thái</th><th>Lý do</th><th>Người sửa / thời điểm</th><th></th></tr></thead><tbody>{calendar.length ? calendar.map(item => <tr key={item.trading_date}><td><b>{item.trading_date}</b></td><td>{item.is_trading_day ? 'CÓ GIAO DỊCH' : 'NGHỈ GIAO DỊCH'}</td><td>{item.reason}</td><td>{item.actor}<small>{stamp(item.updated_at)}</small></td><td><button disabled={busy} onClick={() => deleteCalendar(item.trading_date)}>XÓA GHI ĐÈ</button></td></tr>) : <tr><td colSpan="5">Chưa có ngày ghi đè.</td></tr>}</tbody></table></div></section>
       <section className="analysis-panel"><div className="section-title"><span>LƯỢT QUÉT</span><small>{runs.length} lượt gần nhất</small></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Ngày / slot</th><th>Trạng thái</th><th>Độ phủ</th><th>Bắt đầu</th><th>Dữ liệu đến</th><th>Lỗi</th><th></th></tr></thead><tbody>{runs.map(run => <tr key={run.id}><td><b>{run.trading_date}</b><small>{run.slot} · lần {run.attempt}</small><small>{run.id}</small></td><td>{run.status}<small>{run.job_phase || '—'} · {run.progress_pct ?? 0}%</small></td><td>{run.analyzed_count}/{run.universe_count} · lỗi {run.failed_count}</td><td>{stamp(run.started_at)}</td><td>{run.data_as_of || '—'}</td><td className="admin-error">{run.error || '—'}</td><td>{['failed', 'published'].includes(run.status) && <button disabled={busy} onClick={() => rerun(run)}>CHẠY LẠI</button>}</td></tr>)}</tbody></table></div></section>
       <section className="analysis-panel"><div className="section-title"><span>HÀNG ĐỢI</span><small>{jobs.length} job gần nhất</small></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Loại / mã</th><th>Trạng thái</th><th>Tiến độ</th><th>Yêu cầu</th><th>Lỗi</th><th></th></tr></thead><tbody>{jobs.map(job => <tr key={job.id}><td><b>{job.kind} {job.symbol || ''}</b><small>{job.id}</small></td><td>{job.status}</td><td>{job.phase} · {job.progress_pct}%</td><td>{stamp(job.requested_at)}</td><td className="admin-error">{job.error || '—'}</td><td>{job.kind === 'quant' && job.status === 'failed' && <button disabled={busy} onClick={() => runAction(`jobs/${job.id}/retry`)}>CHẠY LẠI</button>}</td></tr>)}</tbody></table></div></section>
       <section className="analysis-panel"><div className="section-title"><span>NHẬT KÝ QUẢN TRỊ</span></div><div className="admin-audit">{audit.map(item => <div key={item.id}><b>{item.action}</b><span>{item.target_id}</span><span>{stamp(item.created_at)}</span></div>)}</div></section>
