@@ -167,6 +167,21 @@ class ApiQueueTest(unittest.TestCase):
         self.assertEqual(result['sample_size'], 5)
         self.assertGreater(result['win_rate_pct'], 0)
 
+    def test_quant_job_active_quota_and_idempotency(self):
+        with patch.dict(os.environ, {'QUANTIK_MAX_ACTIVE_JOBS_PER_OWNER': '1',
+                                     'QUANTIK_MAX_JOBS_PER_24H': '2'}):
+            with TestClient(app) as client:
+                client.post('/api/v1/session')
+                first = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'},
+                                    headers={'Idempotency-Key': 'quota-same'})
+                self.assertEqual(first.status_code, 202)
+                repeat = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'},
+                                     headers={'Idempotency-Key': 'quota-same'})
+                self.assertEqual(repeat.json()['job_id'], first.json()['job_id'])
+                blocked = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'})
+                self.assertEqual(blocked.status_code, 429)
+                client.delete(f"/api/v1/quant/jobs/{first.json()['job_id']}")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -25,6 +25,14 @@ class RecoveryTest(unittest.TestCase):
                 self.assertEqual(second["id"], first["id"])
                 with store.connect() as db:
                     self.assertEqual(db.execute("SELECT status FROM scan_runs WHERE id=?", (created["run_id"],)).fetchone()[0], "queued")
+                with store.connect(write=True) as db:
+                    db.execute("UPDATE jobs SET heartbeat_at='2000-01-01T00:00:00+00:00',max_attempts=2 WHERE id=?", (first["id"],))
+                self.assertIsNone(store.claim_job())
+                with store.connect() as db:
+                    job = db.execute("SELECT status,error,attempts FROM jobs WHERE id=?", (first["id"],)).fetchone()
+                    run = db.execute("SELECT status FROM scan_runs WHERE id=?", (created["run_id"],)).fetchone()
+                self.assertEqual((job["status"], job["attempts"], run["status"]), ("failed", 2, "failed"))
+                self.assertIn("2", job["error"])
             finally:
                 store.DB_PATH = original
 

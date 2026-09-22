@@ -78,6 +78,7 @@ def public_job(row):
             "status": row["status"], "phase": row["phase"], "progress_pct": row["progress_pct"],
             "requested_at": row["created_at"], "started_at": row["started_at"],
             "finished_at": row["finished_at"], "error": row["error"],
+            "attempts": row["attempts"], "max_attempts": row["max_attempts"],
             "reference_run_id": params.get("reference_run_id"),
             "report_id": row["id"] if row["status"] == "succeeded" else None}
 
@@ -239,7 +240,8 @@ def create_quant_job(body: QuantRequest, request: Request,
                       {"include_backtest": body.include_backtest, "reference_run_id": run["id"]},
                       idempotency_key)
     except ValueError as exc:
-        raise HTTPException(409, str(exc)) from exc
+        status = 429 if str(exc).startswith("QUOTA_") else 409
+        raise HTTPException(status, str(exc).split(": ", 1)[-1]) from exc
     return {"job_id": row["id"], "status": row["status"],
             "status_url": f"/api/v1/quant/jobs/{row['id']}"}
 
@@ -455,7 +457,7 @@ def admin_retry_job(job_id: str, x_admin_key: str | None = Header(default=None),
     params = loads(row["params_json"], {})
     params["retry_of"] = job_id
     created = new_job("quant", row["owner"], row["symbol"], params,
-                      idempotency_key=f"admin-retry:{job_id}")
+                      idempotency_key=f"admin-retry:{job_id}", enforce_quota=False)
     audit_admin("job.retry", created["id"], x_admin_actor or "admin-key")
     return {"job_id": created["id"], "retry_of": job_id, "status": created["status"]}
 

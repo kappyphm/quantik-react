@@ -83,6 +83,7 @@ def init_db():
           params_json TEXT NOT NULL, report_json TEXT,
           idempotency_key TEXT, created_at TEXT NOT NULL,
           started_at TEXT, finished_at TEXT, heartbeat_at TEXT, error TEXT,
+          attempts INTEGER NOT NULL DEFAULT 0, max_attempts INTEGER NOT NULL DEFAULT 3,
           FOREIGN KEY(owner) REFERENCES sessions(id)
         );
         CREATE UNIQUE INDEX IF NOT EXISTS jobs_idempotency ON jobs(owner, idempotency_key)
@@ -109,6 +110,10 @@ def init_db():
         columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         if "heartbeat_at" not in columns:
             db.execute("ALTER TABLE jobs ADD COLUMN heartbeat_at TEXT")
+        if "attempts" not in columns:
+            db.execute("ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
+        if "max_attempts" not in columns:
+            db.execute("ALTER TABLE jobs ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3")
         run_columns = {row[1] for row in db.execute("PRAGMA table_info(scan_runs)")}
         if "rerun_of" not in run_columns:
             db.execute("ALTER TABLE scan_runs ADD COLUMN rerun_of TEXT")
@@ -129,7 +134,7 @@ def session_exists(sid: str | None) -> bool:
 
 
 def new_job(kind: str, owner: str | None, symbol: str | None, params: dict,
-            idempotency_key: str | None = None) -> dict:
+            idempotency_key: str | None = None, enforce_quota: bool = True) -> dict:
     with connect(write=True) as db:
         if idempotency_key and owner:
             old = db.execute("SELECT * FROM jobs WHERE owner=? AND idempotency_key=?",
@@ -138,10 +143,23 @@ def new_job(kind: str, owner: str | None, symbol: str | None, params: dict,
                 if old["kind"] != kind or old["symbol"] != symbol or loads(old["params_json"]) != params:
                     raise ValueError("Idempotency-Key đã được dùng cho yêu cầu khác")
                 return dict(old)
+        if kind == "quant" and owner and enforce_quota:
+            active_limit = max(1, int(os.getenv("QUANTIK_MAX_ACTIVE_JOBS_PER_OWNER", "2")))
+            daily_limit = max(active_limit, int(os.getenv("QUANTIK_MAX_JOBS_PER_24H", "10")))
+            active = db.execute("SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND status IN ('queued','running')",
+                                (owner,)).fetchone()[0]
+            since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(timespec="seconds")
+            recent = db.execute("SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND created_at>=?",
+                                (owner, since)).fetchone()[0]
+            if active >= active_limit:
+                raise ValueError(f"QUOTA_ACTIVE: Tối đa {active_limit} job đang chờ hoặc chạy")
+            if recent >= daily_limit:
+                raise ValueError(f"QUOTA_DAILY: Tối đa {daily_limit} job trong 24 giờ")
         job_id = uuid.uuid4().hex
-        db.execute("""INSERT INTO jobs(id,kind,owner,symbol,status,phase,params_json,idempotency_key,created_at)
-                      VALUES (?,?,?,?,'queued','queued',?,?,?)""",
-                   (job_id, kind, owner, symbol, dumps(params), idempotency_key, now()))
+        max_attempts = max(1, int(os.getenv("QUANTIK_JOB_MAX_ATTEMPTS", "3")))
+        db.execute("""INSERT INTO jobs(id,kind,owner,symbol,status,phase,params_json,idempotency_key,created_at,max_attempts)
+                      VALUES (?,?,?,?,'queued','queued',?,?,?,?)""",
+                   (job_id, kind, owner, symbol, dumps(params), idempotency_key, now(), max_attempts))
         db.execute("""INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at)
                       VALUES (?,'job.progress','queued',0,?,?)""", (job_id, "Đang chờ worker", now()))
         return dict(db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone())
@@ -151,10 +169,20 @@ def claim_job() -> dict | None:
     with connect(write=True) as db:
         cutoff = (datetime.now(timezone.utc) - timedelta(seconds=90)).isoformat(timespec="seconds")
         future = (datetime.now(timezone.utc) + timedelta(seconds=90)).isoformat(timespec="seconds")
-        stale = db.execute("SELECT id,kind,params_json FROM jobs WHERE status='running' AND "
+        stale = db.execute("SELECT id,kind,params_json,attempts,max_attempts FROM jobs WHERE status='running' AND "
                            "(COALESCE(heartbeat_at,started_at,created_at) < ? OR "
                            "COALESCE(heartbeat_at,started_at,created_at) > ?)", (cutoff, future)).fetchall()
         for old in stale:
+            if old["attempts"] >= old["max_attempts"]:
+                message = f"Worker bị gián đoạn quá {old['max_attempts']} lần"
+                db.execute("UPDATE jobs SET status='failed',phase='failed',finished_at=?,error=? WHERE id=?",
+                           (now(), message, old["id"]))
+                if old["kind"] == "scan":
+                    run_id = loads(old["params_json"], {}).get("run_id")
+                    db.execute("UPDATE scan_runs SET status='failed',error=? WHERE id=?", (message, run_id))
+                db.execute("INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at) VALUES (?,'job.failed','failed',0,?,?)",
+                           (old["id"], message, now()))
+                continue
             db.execute("UPDATE jobs SET status='queued',phase='queued',progress_pct=0,started_at=NULL,heartbeat_at=NULL WHERE id=?", (old["id"],))
             if old["kind"] == "scan":
                 run_id = loads(old["params_json"], {}).get("run_id")
@@ -165,7 +193,7 @@ def claim_job() -> dict | None:
         if not row:
             return None
         timestamp = now()
-        db.execute("UPDATE jobs SET status='running',phase='starting',started_at=?,heartbeat_at=? WHERE id=?", (timestamp, timestamp, row["id"]))
+        db.execute("UPDATE jobs SET status='running',phase='starting',started_at=?,heartbeat_at=?,attempts=attempts+1 WHERE id=?", (timestamp, timestamp, row["id"]))
         return dict(db.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone())
 
 
@@ -210,9 +238,10 @@ def create_scan(slot: str, trading_date: str, owner: str | None = None,
         db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,rerun_of)
                       VALUES (?,?,?,?,'queued',?,?)""", (run_id, trading_date, slot, attempt, now(), rerun_of))
         job_id = uuid.uuid4().hex
-        db.execute("""INSERT INTO jobs(id,kind,owner,status,phase,params_json,created_at)
-                      VALUES (?,'scan',?,'queued','queued',?,?)""",
-                   (job_id, owner, dumps({"run_id": run_id}), now()))
+        max_attempts = max(1, int(os.getenv("QUANTIK_JOB_MAX_ATTEMPTS", "3")))
+        db.execute("""INSERT INTO jobs(id,kind,owner,status,phase,params_json,created_at,max_attempts)
+                      VALUES (?,'scan',?,'queued','queued',?,?,?)""",
+                   (job_id, owner, dumps({"run_id": run_id}), now(), max_attempts))
         db.execute("""INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at)
                       VALUES (?,'job.progress','queued',0,?,?)""", (job_id, "Đang chờ worker quét", now()))
         return {"run_id": run_id, "job_id": job_id, "slot": slot, "trading_date": trading_date,
