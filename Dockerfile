@@ -1,7 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+RUN npm install --global pnpm@9 && pnpm install --frozen-lockfile
 COPY index.html vite.config.js ./
 COPY src ./src
 RUN pnpm build
