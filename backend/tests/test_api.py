@@ -14,6 +14,7 @@ os.environ['QUANTIK_ALLOW_DEMO'] = 'true'
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
+import server
 from server import app
 from store import connect, create_scan, dumps, init_db, new_job, now, update_job
 from worker import process_one, run_scan
@@ -89,6 +90,15 @@ class ApiQueueTest(unittest.TestCase):
                 os.environ.pop('QUANTIK_ALLOW_DEMO', None)
             else:
                 os.environ['QUANTIK_ALLOW_DEMO'] = previous
+
+    def test_request_id_and_public_source_error_are_safe(self):
+        with TestClient(app) as client:
+            response = client.get('/health/live', headers={'X-Request-ID': 'test-request-123'})
+            self.assertEqual(response.headers['X-Request-ID'], 'test-request-123')
+            with patch.object(server, 'live_market_overview', side_effect=RuntimeError('C:/secret/provider.txt')):
+                failed = client.get('/api/v1/market/overview')
+            self.assertEqual(failed.status_code, 503)
+            self.assertNotIn('secret', failed.text)
 
     def test_admin_rerun_and_retry_are_audited(self):
         os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'

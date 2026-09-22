@@ -7,7 +7,6 @@ import os
 import re
 import shutil
 import time
-import traceback
 import threading
 import uuid
 from datetime import date
@@ -122,9 +121,10 @@ def run_scan(job):
             db.execute("""INSERT INTO publication(key,run_id) VALUES ('latest',?)
                           ON CONFLICT(key) DO UPDATE SET run_id=excluded.run_id""", (run_id,))
         update_job(job["id"], "done", 100, "Đã công bố bản quét", status="succeeded")
-    except Exception:
+    except Exception as exc:
         with connect(write=True) as db:
-            db.execute("UPDATE scan_runs SET status='failed',error=? WHERE id=?", (traceback.format_exc()[-2000:], run_id))
+            safe_error = f"{type(exc).__name__}: {exc}"[:1000]
+            db.execute("UPDATE scan_runs SET status='failed',error=? WHERE id=?", (safe_error, run_id))
         raise
 
 

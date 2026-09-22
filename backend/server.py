@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import sqlite3
+import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -20,6 +23,7 @@ from store import connect, create_scan, init_db, loads, new_job, new_session, se
 from market import overview as live_market_overview
 
 load_project_env()
+log = logging.getLogger("quantik.api")
 app = FastAPI(title="QuanTik API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"],
                    allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -27,6 +31,25 @@ SYMBOL_RE = re.compile(r"^[A-Z]{3,5}$")
 SORT_FIELDS = {"symbol", "recommendation", "gate_pass", "gate_explanation", "score", "rating",
                "hold_plan", "vni_trend", "sector", "sector_trend", "exchange"}
 COOKIE_SECURE = os.getenv("QUANTIK_COOKIE_SECURE", "false").lower() == "true"
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    supplied = request.headers.get("X-Request-ID", "")
+    request_id = supplied if re.fullmatch(r"[A-Za-z0-9._:-]{8,80}", supplied) else uuid.uuid4().hex
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.exception("request_failed request_id=%s method=%s path=%s",
+                      request_id, request.method, request.url.path)
+        raise
+    response.headers["X-Request-ID"] = request_id
+    log.info("request_complete request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+             request_id, request.method, request.url.path, response.status_code,
+             (time.perf_counter() - started) * 1000)
+    return response
 
 
 @app.on_event("startup")
@@ -222,9 +245,10 @@ def market_overview(page: int = 1, page_size: int = 5):
         raise HTTPException(422, "page/page_size không hợp lệ")
     try:
         return live_market_overview(page, page_size)
-    except Exception as exc:
+    except Exception:
+        log.exception("market_source_failed")
         raise HTTPException(503, detail={"code": "MARKET_SOURCE_UNAVAILABLE",
-                                         "message": str(exc)}) from exc
+                                         "message": "Nguồn bảng giá tạm thời không sẵn sàng"})
 
 
 class QuantRequest(BaseModel):
