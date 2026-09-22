@@ -75,7 +75,8 @@ def overview(page: int, page_size: int) -> dict:
         index_bars = _index_bars()
         result = {'source': 'vnstock_price_board',
                   'as_of': datetime.now(timezone.utc).isoformat(timespec='seconds'),
-                  'delay_minutes': None, 'market_status': 'provider_snapshot',
+                  'delay_minutes': None, 'delay_disclosure': 'not_disclosed_by_provider',
+                  'market_status': 'provider_snapshot',
                   'run_id': None, 'total': len(symbols), 'page': page,
                   'page_size': page_size, 'breadth': None,
                   'index_bars': index_bars, 'items': items}

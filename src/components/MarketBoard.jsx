@@ -39,7 +39,7 @@ export default function MarketBoard() {
     fetch(`/api/v1/market/overview?page=${page}&page_size=${pageSize}`, { signal: controller.signal })
       .then(async response => { if (!response.ok) throw new Error('Chưa có dữ liệu bảng điện'); return response.json(); })
       .then(data => { setRemote(data); setError(''); })
-      .catch(e => { if (e.name !== 'AbortError') { setRemote(null); setError(e.message); } });
+      .catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     return () => controller.abort();
   }, [page, pageSize]);
   const indexBars = remote?.index_bars || [];
@@ -51,12 +51,13 @@ export default function MarketBoard() {
   const declines = remote?.breadth?.declines;
   return <section className="market-board" aria-label="Bảng điện thị trường">
     <div className="market-board-head"><div><span className="market-board-kicker">THỊ TRƯỜNG VIỆT NAM / TỔNG QUAN</span><strong>Bảng điện</strong></div><span className="market-demo-tag">{`${remote?.source === 'vnstock_price_board' ? 'VNSTOCK · BẢNG GIÁ' : 'ĐANG TẢI'} · ${remote?.as_of || '—'}`}</span></div>
-    {error ? <div className="market-api-empty">{error}</div> : <>
+    {error && <div className="market-api-empty" role="alert">{error}{remote ? ` · đang giữ snapshot nhận lúc ${remote.as_of}` : ''}</div>}
+    {remote ? <>
     {index ? <div className="market-index"><div className="market-index-stat"><span>VN-INDEX · EOD</span><strong>{fmt(index.current * scale)}</strong><b className={index.difference >= 0 ? 'positive' : 'negative'}>{index.difference >= 0 ? '+' : ''}{fmt(index.difference * scale)} ({index.percent >= 0 ? '+' : ''}{fmt(index.percent)}%)</b></div><IndexChart bars={indexBars} scale={scale} /></div> : <div className="market-api-empty">{remote ? 'Chưa có dữ liệu VN-Index từ Vnstock.' : 'Đang tải dữ liệu VN-Index…'}</div>}
     <div className="market-breadth">{advances != null && <span><i className="up-dot"/> Tăng <strong>{advances}</strong></span>}{declines != null && <span><i className="down-dot"/> Giảm <strong>{declines}</strong></span>}<span>{total} mã · HOSE / HNX / UPCoM</span></div>
     <div className="market-board-scroll"><table className="market-board-table"><thead><tr><th>MÃ / SÀN</th><th>GIÁ</th><th>+/−</th><th>%</th><th>KL</th></tr></thead><tbody>{visible.map(row => <tr key={row.symbol}><td><strong>{row.symbol}</strong><small>{row.exchange}</small></td><td className={row.difference == null ? '' : row.difference >= 0 ? 'positive' : 'negative'}>{fmt(row.current)}</td><td className={row.difference == null ? '' : row.difference >= 0 ? 'positive' : 'negative'}>{row.difference == null ? '—' : `${row.difference >= 0 ? '+' : ''}${fmt(row.difference)}`}</td><td className={row.percent == null ? '' : row.percent >= 0 ? 'positive' : 'negative'}>{row.percent == null ? '—' : `${row.percent >= 0 ? '+' : ''}${fmt(row.percent)}%`}</td><td>{fmt(row.volume, 0)}</td></tr>)}</tbody></table></div>
     <Pagination total={total} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={size => { setPageSize(size); setPage(1); }} />
-    </>}
-    <div className="market-board-foot">Giá từ bảng giá Vnstock · thời điểm cập nhật theo nhà cung cấp</div>
+    </> : !error && <div className="market-api-empty">Đang tải bảng giá Vnstock…</div>}
+    <div className="market-board-foot">Giá từ bảng giá Vnstock · thời điểm trên là lúc backend nhận snapshot · độ trễ nguồn không được nhà cung cấp công bố</div>
   </section>;
 }
