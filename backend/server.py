@@ -351,24 +351,46 @@ def get_artifact(report_id: str, artifact_id: str, request: Request):
 class ScanRequest(BaseModel):
     slot: str = Field(pattern="^(PRE_OPEN|POST_CLOSE|MANUAL)$")
     trading_date: str | None = None
+    rerun_of: str | None = None
+
+
+def audit_admin(action: str, target_id: str, actor: str):
+    with connect(write=True) as db:
+        db.execute("INSERT INTO admin_audit(action,target_id,actor,created_at) VALUES (?,?,?,?)",
+                   (action, target_id, actor[:80], now()))
+
+
+@app.get("/api/v1/admin/session")
+def admin_session(x_admin_key: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    return {"ready": True}
 
 
 @app.post("/api/v1/admin/scan-runs", status_code=202)
-def admin_create_scan(body: ScanRequest, x_admin_key: str | None = Header(default=None)):
+def admin_create_scan(body: ScanRequest, x_admin_key: str | None = Header(default=None),
+                      x_admin_actor: str | None = Header(default=None)):
     admin_or_403(x_admin_key)
     date = body.trading_date or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date().isoformat()
     try:
         datetime.strptime(date, "%Y-%m-%d")
     except ValueError as exc:
         raise HTTPException(422, "trading_date không hợp lệ") from exc
-    return create_scan(body.slot, date)
+    try:
+        created = create_scan(body.slot, date, rerun_of=body.rerun_of)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    audit_admin("scan.create", created["run_id"], x_admin_actor or "admin-key")
+    return created
 
 
 @app.get("/api/v1/admin/scan-runs")
 def admin_runs(x_admin_key: str | None = Header(default=None)):
     admin_or_403(x_admin_key)
     with connect() as db:
-        rows = db.execute("SELECT * FROM scan_runs ORDER BY created_at DESC LIMIT 100").fetchall()
+        rows = db.execute("""SELECT r.*,j.id AS job_id,j.phase AS job_phase,j.progress_pct AS progress_pct
+                             FROM scan_runs r LEFT JOIN jobs j ON j.kind='scan'
+                             AND json_extract(j.params_json,'$.run_id')=r.id
+                             ORDER BY r.created_at DESC LIMIT 100""").fetchall()
     return {"items": [{k: row[k] for k in row.keys() if k != "index_json"} for row in rows]}
 
 
@@ -418,6 +440,32 @@ def admin_jobs(x_admin_key: str | None = Header(default=None)):
     with connect() as db:
         rows = db.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT 100").fetchall()
     return {"items": [public_job(row) | {"kind": row["kind"]} for row in rows]}
+
+
+@app.post("/api/v1/admin/jobs/{job_id}/retry", status_code=202)
+def admin_retry_job(job_id: str, x_admin_key: str | None = Header(default=None),
+                    x_admin_actor: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    with connect() as db:
+        row = db.execute("SELECT * FROM jobs WHERE id=? AND kind='quant'", (job_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "Không tìm thấy job QUANT")
+    if row["status"] != "failed":
+        raise HTTPException(409, "Chỉ chạy lại job QUANT thất bại")
+    params = loads(row["params_json"], {})
+    params["retry_of"] = job_id
+    created = new_job("quant", row["owner"], row["symbol"], params,
+                      idempotency_key=f"admin-retry:{job_id}")
+    audit_admin("job.retry", created["id"], x_admin_actor or "admin-key")
+    return {"job_id": created["id"], "retry_of": job_id, "status": created["status"]}
+
+
+@app.get("/api/v1/admin/audit")
+def admin_audit(x_admin_key: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    with connect() as db:
+        rows = db.execute("SELECT * FROM admin_audit ORDER BY id DESC LIMIT 100").fetchall()
+    return {"items": [dict(row) for row in rows]}
 
 
 @app.get("/api/v1/admin/quant/reports/{job_id}")

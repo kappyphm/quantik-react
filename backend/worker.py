@@ -42,6 +42,17 @@ def run_scan(job):
         result = scan_all(progress, symbols=params.get("symbols"),
                           checkpoint_dir=ARTIFACT_ROOT.parent / "scan_cache" / run_id,
                           universe_ready=universe_ready)
+        with connect(write=True) as db:
+            for summary, detail, bars in result["results"]:
+                db.execute("""INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json)
+                              VALUES (?,?,?,?,?) ON CONFLICT(run_id,symbol) DO UPDATE SET
+                              summary_json=excluded.summary_json,detail_json=excluded.detail_json,
+                              ohlcv_json=excluded.ohlcv_json""",
+                           (run_id, summary["symbol"], dumps(summary), dumps(detail), dumps(bars)))
+            db.execute("""UPDATE scan_runs SET data_as_of=?,universe_count=?,analyzed_count=?,
+                          failed_count=?,index_json=? WHERE id=?""",
+                       (result["data_as_of"], result["universe_count"], result["analyzed_count"],
+                        result["failed_count"], dumps(result["index_bars"]), run_id))
         coverage = result["analyzed_count"] / max(1, result["universe_count"])
         min_coverage = float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80"))
         if coverage < min_coverage:
@@ -49,14 +60,7 @@ def run_scan(job):
         if not result["index_bars"]:
             raise RuntimeError("Thiếu OHLCV VN-Index; run không được công bố")
         with connect(write=True) as db:
-            for summary, detail, bars in result["results"]:
-                db.execute("""INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json)
-                              VALUES (?,?,?,?,?)""",
-                           (run_id, summary["symbol"], dumps(summary), dumps(detail), dumps(bars)))
-            db.execute("""UPDATE scan_runs SET status='published',published_at=?,data_as_of=?,
-                          universe_count=?,analyzed_count=?,failed_count=?,index_json=? WHERE id=?""",
-                       (now(), result["data_as_of"], result["universe_count"], result["analyzed_count"],
-                        result["failed_count"], dumps(result["index_bars"]), run_id))
+            db.execute("UPDATE scan_runs SET status='published',published_at=? WHERE id=?", (now(), run_id))
             db.execute("""INSERT INTO publication(key,run_id) VALUES ('latest',?)
                           ON CONFLICT(key) DO UPDATE SET run_id=excluded.run_id""", (run_id,))
         update_job(job["id"], "done", 100, "Đã công bố bản quét", status="succeeded")

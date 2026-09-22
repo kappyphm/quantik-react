@@ -63,7 +63,7 @@ def init_db():
           created_at TEXT NOT NULL, started_at TEXT, published_at TEXT,
           data_as_of TEXT, universe_count INTEGER NOT NULL DEFAULT 0,
           analyzed_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
-          index_json TEXT, error TEXT,
+          index_json TEXT, error TEXT, rerun_of TEXT,
           UNIQUE(trading_date, slot, attempt)
         );
         CREATE TABLE IF NOT EXISTS scan_results (
@@ -101,10 +101,17 @@ def init_db():
           path TEXT NOT NULL, created_at TEXT NOT NULL,
           FOREIGN KEY(job_id) REFERENCES jobs(id)
         );
+        CREATE TABLE IF NOT EXISTS admin_audit (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL,
+          target_id TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL
+        );
         """)
         columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         if "heartbeat_at" not in columns:
             db.execute("ALTER TABLE jobs ADD COLUMN heartbeat_at TEXT")
+        run_columns = {row[1] for row in db.execute("PRAGMA table_info(scan_runs)")}
+        if "rerun_of" not in run_columns:
+            db.execute("ALTER TABLE scan_runs ADD COLUMN rerun_of TEXT")
 
 
 def new_session() -> str:
@@ -182,17 +189,31 @@ def update_job(job_id: str, phase: str, progress: int, message: str,
                       VALUES (?,?,?,?,?,?)""", (job_id, event_type, phase, progress, message, now()))
 
 
-def create_scan(slot: str, trading_date: str, owner: str | None = None) -> dict:
+def create_scan(slot: str, trading_date: str, owner: str | None = None,
+                rerun_of: str | None = None) -> dict:
     with connect(write=True) as db:
+        if rerun_of:
+            previous = db.execute("SELECT trading_date,slot FROM scan_runs WHERE id=?", (rerun_of,)).fetchone()
+            if not previous or previous["trading_date"] != trading_date or previous["slot"] != slot:
+                raise ValueError("Bản quét gốc không khớp ngày và slot")
+        active = db.execute("SELECT 1 FROM scan_runs WHERE trading_date=? AND slot=? AND status IN ('queued','running')",
+                            (trading_date, slot)).fetchone()
+        if active:
+            raise ValueError("Đã có bản quét đang chờ hoặc đang chạy cho slot này")
+        previous_count = db.execute("SELECT COUNT(*) FROM scan_runs WHERE trading_date=? AND slot=?",
+                                    (trading_date, slot)).fetchone()[0]
+        if previous_count and not rerun_of:
+            raise ValueError("Lượt chạy lại phải chỉ rõ bản quét gốc")
         attempt = db.execute("SELECT COALESCE(MAX(attempt),0)+1 FROM scan_runs WHERE trading_date=? AND slot=?",
                              (trading_date, slot)).fetchone()[0]
         run_id = uuid.uuid4().hex
-        db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at)
-                      VALUES (?,?,?,?,'queued',?)""", (run_id, trading_date, slot, attempt, now()))
+        db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,rerun_of)
+                      VALUES (?,?,?,?,'queued',?,?)""", (run_id, trading_date, slot, attempt, now(), rerun_of))
         job_id = uuid.uuid4().hex
         db.execute("""INSERT INTO jobs(id,kind,owner,status,phase,params_json,created_at)
                       VALUES (?,'scan',?,'queued','queued',?,?)""",
                    (job_id, owner, dumps({"run_id": run_id}), now()))
         db.execute("""INSERT INTO job_events(job_id,event_type,phase,progress_pct,message,created_at)
                       VALUES (?,'job.progress','queued',0,?,?)""", (job_id, "Đang chờ worker quét", now()))
-        return {"run_id": run_id, "job_id": job_id, "slot": slot, "trading_date": trading_date, "attempt": attempt}
+        return {"run_id": run_id, "job_id": job_id, "slot": slot, "trading_date": trading_date,
+                "attempt": attempt, "rerun_of": rerun_of}

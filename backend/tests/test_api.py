@@ -1,9 +1,11 @@
 """Small API/queue contract test against an isolated SQLite database."""
+import json
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 TEST_DIR = tempfile.TemporaryDirectory()
 os.environ['QUANTIK_DB_PATH'] = str(Path(TEST_DIR.name) / 'test.sqlite')
@@ -12,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
 from server import app
-from store import connect, dumps, init_db, now
-from worker import process_one
+from store import connect, create_scan, dumps, init_db, new_job, now, update_job
+from worker import process_one, run_scan
 
 
 class ApiQueueTest(unittest.TestCase):
@@ -85,6 +87,64 @@ class ApiQueueTest(unittest.TestCase):
                 os.environ.pop('QUANTIK_ALLOW_DEMO', None)
             else:
                 os.environ['QUANTIK_ALLOW_DEMO'] = previous
+
+    def test_admin_rerun_and_retry_are_audited(self):
+        os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'
+        headers = {'X-Admin-Key': 'test-admin-only', 'X-Admin-Actor': 'operator-test'}
+        with TestClient(app) as client:
+            self.assertEqual(client.get('/api/v1/admin/session').status_code, 403)
+            self.assertEqual(client.get('/api/v1/admin/session', headers=headers).status_code, 200)
+            body = {'slot': 'MANUAL', 'trading_date': '2026-09-20'}
+            created = client.post('/api/v1/admin/scan-runs', json=body, headers=headers)
+            self.assertEqual(created.status_code, 202)
+            run_id = created.json()['run_id']
+            self.assertEqual(client.post('/api/v1/admin/scan-runs', json=body, headers=headers).status_code, 409)
+            with connect(write=True) as db:
+                db.execute("UPDATE scan_runs SET status='failed' WHERE id=?", (run_id,))
+            rerun = client.post('/api/v1/admin/scan-runs', json={**body, 'rerun_of': run_id}, headers=headers)
+            self.assertEqual(rerun.status_code, 202)
+            self.assertEqual(rerun.json()['rerun_of'], run_id)
+            self.assertEqual(rerun.json()['attempt'], 2)
+            client.post('/api/v1/session')
+            owner = client.cookies.get('quantik_sid')
+            failed = new_job('quant', owner, 'FPT', {'include_backtest': False})
+            update_job(failed['id'], 'failed', 10, 'Lỗi kiểm thử', status='failed', error='test')
+            retried = client.post(f"/api/v1/admin/jobs/{failed['id']}/retry", headers=headers)
+            self.assertEqual(retried.status_code, 202)
+            self.assertEqual(client.post(f"/api/v1/admin/jobs/{failed['id']}/retry", headers=headers).json()['job_id'],
+                             retried.json()['job_id'])
+            with connect() as db:
+                row = db.execute('SELECT owner,params_json FROM jobs WHERE id=?', (retried.json()['job_id'],)).fetchone()
+            self.assertEqual(row['owner'], owner)
+            self.assertEqual(json.loads(row['params_json'])['retry_of'], failed['id'])
+            self.assertEqual(client.post(f"/api/v1/admin/jobs/{failed['id']}/retry", headers={'X-Admin-Key': 'wrong'}).status_code, 403)
+            audit = client.get('/api/v1/admin/audit', headers=headers).json()['items']
+            self.assertTrue(any(item['action'] == 'scan.create' and item['target_id'] == run_id for item in audit))
+            self.assertTrue(any(item['action'] == 'job.retry' and item['target_id'] == retried.json()['job_id'] for item in audit))
+            with connect(write=True) as db:
+                db.execute("UPDATE jobs SET status='cancelled' WHERE status='queued'")
+
+    def test_failed_scan_keeps_symbol_diagnostics_without_publication(self):
+        created = create_scan('MANUAL', '2026-09-19')
+        with connect() as db:
+            job = dict(db.execute('SELECT * FROM jobs WHERE id=?', (created['job_id'],)).fetchone())
+        summary = {'symbol': 'FPT', 'analysis_status': 'completed'}
+        failed = {'symbol': 'ABC', 'analysis_status': 'failed', 'gate_explanation': 'NO_OHLCV'}
+        result = {'results': [(summary, summary, []), (failed, failed, [])],
+                  'universe_count': 2, 'analyzed_count': 1, 'failed_count': 1,
+                  'index_bars': [{'time': '2026-09-18'}], 'data_as_of': '2026-09-18'}
+        with patch('worker.scan_all', return_value=result):
+            with self.assertRaisesRegex(RuntimeError, 'Độ phủ'):
+                run_scan(job)
+        with connect() as db:
+            run = db.execute('SELECT status,analyzed_count,failed_count FROM scan_runs WHERE id=?',
+                             (created['run_id'],)).fetchone()
+            count = db.execute('SELECT COUNT(*) FROM scan_results WHERE run_id=?', (created['run_id'],)).fetchone()[0]
+            latest = db.execute("SELECT run_id FROM publication WHERE key='latest'").fetchone()[0]
+        self.assertEqual((run['status'], run['analyzed_count'], run['failed_count'], count), ('failed', 1, 1, 2))
+        self.assertNotEqual(latest, created['run_id'])
+        with connect(write=True) as db:
+            db.execute("UPDATE jobs SET status='cancelled' WHERE id=?", (created['job_id'],))
 
 
 if __name__ == '__main__':

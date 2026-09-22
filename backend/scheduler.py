@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from runtime_env import load_project_env
@@ -19,24 +19,32 @@ log = logging.getLogger("quantik.scheduler")
 ZONE = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
-def tick():
-    current = datetime.now(ZONE)
+def tick(current=None):
+    current = current or datetime.now(ZONE)
     date = current.date().isoformat()
     holidays = {item.strip() for item in os.getenv("QUANTIK_HOLIDAYS", "").split(",") if item.strip()}
     if current.weekday() >= 5 or date in holidays:
         return
-    clock = current.strftime("%H:%M")
     slots = (("PRE_OPEN", os.getenv("QUANTIK_PRE_OPEN_TIME", "07:00")),
              ("POST_CLOSE", os.getenv("QUANTIK_POST_CLOSE_TIME", "16:20")))
     for slot, scheduled in slots:
-        if clock < scheduled:
+        try:
+            hour, minute = map(int, scheduled.split(":"))
+            scheduled_at = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        except (ValueError, TypeError):
+            log.error("Invalid schedule for %s: %r", slot, scheduled)
+            continue
+        if not scheduled_at <= current < scheduled_at + timedelta(minutes=5):
             continue
         with connect() as db:
             existing = db.execute("SELECT 1 FROM scan_runs WHERE trading_date=? AND slot=?",
                                   (date, slot)).fetchone()
         if not existing:
-            created = create_scan(slot, date)
-            log.info("Enqueued %s scan %s for %s", slot, created["run_id"], date)
+            try:
+                created = create_scan(slot, date)
+                log.info("Enqueued %s scan %s for %s", slot, created["run_id"], date)
+            except ValueError:
+                log.info("Scan %s for %s was already enqueued", slot, date)
 
 
 if __name__ == "__main__":

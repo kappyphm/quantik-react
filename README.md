@@ -16,6 +16,7 @@ if not exist .env copy .env-template .env
 
 ```dotenv
 VNSTOCK_API_KEY=khóa-của-bạn
+QUANTIK_ADMIN_KEY=khóa-quản-trị-ngẫu-nhiên-dài
 ```
 
 Backend nạp file này khi khởi động API, worker hoặc scheduler. `.env` đã được Git bỏ qua; không đặt khóa trong `src/` hoặc biến Vite `VITE_` vì những giá trị đó có thể xuất hiện trong frontend. Sau khi sửa `.env`, khởi động lại các tiến trình backend.
@@ -48,9 +49,11 @@ pnpm dev
 .venv\Scripts\python.exe -c "from store import create_scan; from datetime import date; print(create_scan('MANUAL', date.today().isoformat()))"
 ```
 
-Để chạy lịch PRE_OPEN và POST_CLOSE, mở thêm một tiến trình `scheduler.py`. Chỉ chạy một scheduler và một worker cho SQLite.
+Để chạy lịch PRE_OPEN và POST_CLOSE, mở thêm một tiến trình `scheduler.py` từ `backend`. Chỉ chạy một scheduler và một worker cho SQLite.
 
 Mở `http://localhost:5173`. Vite proxy `/api` sang cổng 8000. Bảng điện gọi Vnstock qua backend; `/scan` chỉ hiển thị bản quét thật sau khi worker hoàn tất kiểm tra độ phủ và công bố. Khi chưa có bản công bố, giao diện hiển thị tiến độ từ `/api/v1/scans/status`. Snapshot `DEMO-` cũ không được phục vụ mặc định. Dữ liệu job nằm ở `backend/data/quantik.sqlite`; phiên khách dùng cookie HttpOnly.
+
+Trang `/admin` dùng `QUANTIK_ADMIN_KEY` trong `.env`. Nhập khóa vào form để xem lượt quét, hàng đợi, lỗi và nhật ký; khóa chỉ được giữ trong bộ nhớ trang. Có thể tạo lượt quét mới, chạy lại lượt thất bại/đã công bố với liên kết `rerun_of`, và chạy lại job QUANT thất bại. API từ chối tạo trùng một slot đang chờ/chạy. Khóa quản trị của môi trường cục bộ hiện tại đã được tạo trong `.env` bị Git bỏ qua; dùng giá trị đó khi cần mở trang.
 
 Nếu API hoặc frontend đã chạy ở cổng 8000/5173, dùng tiến trình hiện có; không mở thêm một bản cùng cổng.
 
@@ -64,7 +67,7 @@ Nếu backend không sẵn sàng, giao diện báo lỗi kết nối. Bản demo
 - `GET /api/v1/scans/latest`, `/results`, `/facets`, `/results/{symbol}`, `/results/{symbol}/ohlcv`: bản quét mới nhất, lọc và phân trang trên API.
 - `POST /api/v1/quant/jobs`, `GET /api/v1/quant/jobs`, `GET /api/v1/quant/jobs/{id}`, `GET /api/v1/quant/jobs/{id}/events`: hàng đợi bền vững và tiến độ SSE.
 - `GET /api/v1/quant/reports/{id}` và `/artifacts/{artifact_id}`: báo cáo và biểu đồ.
-- `POST /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs/{id}/results` và `/results/{symbol}`, `GET /api/v1/admin/quant/reports/{job_id}`: tra cứu lịch sử; yêu cầu header `X-Admin-Key` và biến môi trường `QUANTIK_ADMIN_KEY`.
+- `GET /api/v1/admin/session`, `POST /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs`, `GET /api/v1/admin/scan-runs/{id}/results` và `/results/{symbol}`, `GET /api/v1/admin/jobs`, `POST /api/v1/admin/jobs/{id}/retry`, `GET /api/v1/admin/audit`: vận hành và tra cứu lịch sử; yêu cầu header `X-Admin-Key` và biến môi trường `QUANTIK_ADMIN_KEY`.
 
 OpenAPI tại `http://localhost:8000/docs`.
 
