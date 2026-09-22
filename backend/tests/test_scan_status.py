@@ -2,8 +2,10 @@ import sys
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from engine import analysis_status, resolve_universe
+from engine import align_index_cutoff, align_market_cutoff, analysis_status, resolve_universe
 from worker import validate_scan_result
 
 
@@ -34,6 +36,28 @@ class ScanStatusTest(unittest.TestCase):
         result['results'][1][2][0]['time'] = '2026-09-18'
         with self.assertRaisesRegex(RuntimeError, 'cùng ngày'):
             validate_scan_result(result, 'MANUAL', '2026-09-22')
+
+    def test_publication_counts_insufficient_data_as_processed(self):
+        result = {'universe_count': 3, 'analyzed_count': 3,
+                  'index_bars': [{'time': '2026-09-21'}], 'data_as_of': '2026-09-21',
+                  'results': [({'analysis_status': 'completed'}, {}, [{'time': '2026-09-21'}]),
+                              ({'analysis_status': 'screened_out'}, {}, [{'time': '2026-09-21'}]),
+                              ({'analysis_status': 'insufficient_data'}, {}, [])]}
+        validate_scan_result(result, 'MANUAL', '2026-09-22')
+
+    def test_market_cutoff_uses_the_modal_completed_date(self):
+        def frame(*days):
+            return pd.DataFrame({'open': 1, 'high': 1, 'low': 1, 'close': 1, 'volume': 1},
+                                index=pd.to_datetime(days))
+        cutoff, aligned = align_market_cutoff({
+            'AAA': frame('2026-09-20', '2026-09-21'),
+            'BBB': frame('2026-09-20', '2026-09-21'),
+            'CCC': frame('2026-09-21', '2026-09-22'),
+        })
+        self.assertEqual(cutoff.isoformat(), '2026-09-21')
+        self.assertEqual(str(aligned['CCC'].index[-1])[:10], '2026-09-21')
+        index = frame('2026-09-20', '2026-09-21', '2026-09-22')
+        self.assertEqual(str(align_index_cutoff(index, cutoff).index[-1])[:10], '2026-09-21')
 
 
 if __name__ == '__main__':

@@ -5,6 +5,8 @@ import math
 import os
 import re
 import time
+from collections import Counter
+from datetime import date
 from pathlib import Path
 
 from quant_service import present_report
@@ -81,6 +83,47 @@ def resolve_universe(symbols=None, provider=None):
     return universe, exchanges
 
 
+def align_market_cutoff(data):
+    """Align daily equity bars to the date most commonly available across the universe.
+
+    During a trading session the index and a small number of liquid symbols may expose
+    an unfinished current-day candle while most historical endpoints still end at the
+    previous completed session.  Using the maximum date would mix those two cutoffs.
+    """
+    import pandas as pd
+
+    last_dates = []
+    for frame in data.values():
+        if frame is not None and not frame.empty:
+            last_dates.append(pd.Timestamp(frame.index.max()).date())
+    if not last_dates:
+        raise RuntimeError("Không xác định được ngày chốt dữ liệu cổ phiếu")
+    counts = Counter(last_dates)
+    highest_count = max(counts.values())
+    cutoff = max(day for day, count in counts.items() if count == highest_count)
+    aligned = {}
+    for symbol, frame in data.items():
+        source = frame.attrs.get("source")
+        index_dates = pd.to_datetime(frame.index, errors="coerce")
+        kept = frame.loc[index_dates.date <= cutoff].copy()
+        if kept.empty:
+            continue
+        if source:
+            kept.attrs["source"] = source
+        aligned[symbol] = kept
+    return cutoff, aligned
+
+
+def align_index_cutoff(frame, cutoff: date):
+    """Remove an unfinished index candle newer than the equity cutoff."""
+    import pandas as pd
+
+    if frame is None or frame.empty:
+        return frame
+    index_dates = pd.to_datetime(frame.index, errors="coerce")
+    return frame.loc[index_dates.date <= cutoff].copy()
+
+
 def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, universe_ready=None):
     """Collect all three exchanges, screen each fetched code and batch QUANT once."""
     import pandas as pd
@@ -133,10 +176,6 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
                 failed[symbol] = "NO_OHLCV"
             else:
                 data[symbol] = frame
-                try:
-                    screening[symbol] = screen_frame(symbol, frame)
-                except Exception as exc:
-                    screening[symbol] = {"error": f"{type(exc).__name__}: {exc}"}
         except Exception as exc:
             if isinstance(exc, RuntimeError) and str(exc).startswith("Vnstock từ chối"):
                 raise
@@ -146,8 +185,18 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
     if not data:
         raise RuntimeError("Không có mã nào có OHLCV hợp lệ")
 
+    data_as_of, aligned_data = align_market_cutoff(data)
+    for symbol in set(data) - set(aligned_data):
+        failed[symbol] = "NO_OHLCV_AT_CUTOFF"
+    data = aligned_data
+    for symbol, frame in data.items():
+        try:
+            screening[symbol] = screen_frame(symbol, frame)
+        except Exception as exc:
+            screening[symbol] = {"error": f"{type(exc).__name__}: {exc}"}
+
     progress("quantifying", 64, f"Đang phân tích định lượng {len(data)} mã")
-    index_frame = bridge.fetch_index("VNINDEX", days=252)
+    index_frame = align_index_cutoff(bridge.fetch_index("VNINDEX", days=252), data_as_of)
     exchanges = dict(universe_exchanges)
     missing_exchange = [symbol for symbol in data if symbol not in exchanges]
     if missing_exchange:
@@ -201,10 +250,10 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
                   "source_meta": {"ohlcv": data[symbol].attrs.get("source") if symbol in data else None}}
         results.append((summary, detail, bars_from_frame(data[symbol]) if symbol in data else []))
     return {"universe_count": len(universe),
-            "analyzed_count": sum(r[0]["analysis_status"] in ("completed", "screened_out") for r in results),
-            "failed_count": sum(r[0]["analysis_status"] in ("failed", "insufficient_data") for r in results),
+            "analyzed_count": sum(r[0]["analysis_status"] != "failed" for r in results),
+            "failed_count": sum(r[0]["analysis_status"] == "failed" for r in results),
             "index_bars": bars_from_frame(index_frame) if index_frame is not None else [],
-            "data_as_of": max((bars[-1]["time"] for _, _, bars in results if bars), default=None),
+            "data_as_of": data_as_of.isoformat(),
             "results": results}
 
 

@@ -44,12 +44,15 @@ def validate_scan_result(result: dict, slot: str, trading_date: str):
         raise RuntimeError(f"PRE_OPEN không được dùng dữ liệu phiên {trading_date}")
     if result["data_as_of"] != index_date.isoformat():
         raise RuntimeError(f"Ngày dữ liệu mã ({result['data_as_of']}) không khớp VN-Index ({index_date})")
-    fresh = sum(summary.get("analysis_status") in ("completed", "screened_out")
-                and bars and bars[-1]["time"][:10] == index_date.isoformat()
-                for summary, _, bars in result["results"])
+    eligible = [(summary, bars) for summary, _, bars in result["results"]
+                if summary.get("analysis_status") in ("completed", "screened_out")]
+    if not eligible:
+        raise RuntimeError("Không có mã nào đủ dữ liệu để phân tích")
+    fresh = sum(bool(bars) and bars[-1]["time"][:10] == index_date.isoformat()
+                for _, bars in eligible)
     min_fresh = float(os.getenv("QUANTIK_MIN_FRESH_COVERAGE", "0.75"))
-    if fresh / universe < min_fresh:
-        raise RuntimeError(f"Chỉ {fresh}/{universe} mã có dữ liệu cùng ngày với VN-Index; cần {min_fresh:.0%}")
+    if fresh / len(eligible) < min_fresh:
+        raise RuntimeError(f"Chỉ {fresh}/{len(eligible)} mã đủ điều kiện có dữ liệu cùng ngày với VN-Index; cần {min_fresh:.0%}")
 
 
 def run_scan(job):
@@ -70,6 +73,8 @@ def run_scan(job):
             "min_coverage": float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80")),
             "min_fresh_coverage": float(os.getenv("QUANTIK_MIN_FRESH_COVERAGE", "0.75")),
             "max_data_age_days": int(os.getenv("QUANTIK_MAX_DATA_AGE_DAYS", "7")),
+            "cutoff_strategy": "modal_last_bar_date",
+            "freshness_denominator": "completed_or_screened_out",
         }
         db.execute("""UPDATE scan_runs SET status='running',started_at=?,model_version=?,
                       source_version=?,config_json=? WHERE id=?""",
