@@ -37,7 +37,15 @@ function LiveQuantReport({ symbol, jobId }) {
   if (state.loading) return <section className="analysis-panel quant-live-state" role="status">Đang tải báo cáo {symbol}…</section>;
   if (state.error) return <section className="analysis-panel quant-live-state" role="alert">Không lấy được báo cáo QUANT: {state.error}</section>;
   const r = state.report;
-  return <section className="report-section"><div className="section-title"><span>BÁO CÁO QUANT / {symbol}</span><small>PHÂN TÍCH QUANT-CORE · DỮ LIỆU ĐẾN {r.as_of}</small></div><div className="report-hero"><div><span>ĐIỂM QUANT</span><strong>{r.score ?? '—'}<small> / 100</small></strong></div><div><span>QUYẾT ĐỊNH</span><strong>{r.action || '—'}</strong></div><div><span>ĐÁNH GIÁ</span><strong>{r.rating || '—'}</strong></div><div><span>LỢI NHUẬN DỰ BÁO</span><strong>{r.fcast?.ensemble_ret_pct ?? '—'}%</strong></div></div><QuantDiagnostics report={r} /><Backtest result={r.backtest} /><div className="quant-artifacts">{r.chart_manifest?.map(item => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">Biểu đồ {item.kind} ↗</a>)}</div></section>;
+  const artifacts = r.chart_manifest || [];
+  const visualErrors = Object.entries(r.visual_errors || {});
+  return <section className="report-section"><div className="section-title"><span>BÁO CÁO QUANT / {symbol}</span><small>PHÂN TÍCH QUANT-CORE · DỮ LIỆU ĐẾN {r.as_of}</small></div><div className="report-hero"><div><span>ĐIỂM QUANT</span><strong>{r.score ?? '—'}<small> / 100</small></strong></div><div><span>QUYẾT ĐỊNH</span><strong>{r.action || '—'}</strong></div><div><span>ĐÁNH GIÁ</span><strong>{r.rating || '—'}</strong></div><div><span>LỢI NHUẬN DỰ BÁO</span><strong>{r.fcast?.ensemble_ret_pct ?? '—'}%</strong></div></div><QuantDiagnostics report={r} /><Backtest result={r.backtest} />
+    <section className="analysis-panel artifact-section"><div className="section-title"><span>BỘ BIỂU ĐỒ TỪ WORKER</span><small>{artifacts.length} biểu đồ</small></div>{artifacts.length
+      ? <div className="quant-artifacts">{artifacts.map(item => <figure key={item.id}><a href={item.url} target="_blank" rel="noreferrer"><img src={item.url} alt={`Biểu đồ ${item.kind} của ${symbol}`} loading="lazy" /><figcaption>{item.kind} ↗</figcaption></a></figure>)}</div>
+      : <p className="quant-caption">Worker không tạo được artifact hình ảnh cho báo cáo này.</p>}
+      {visualErrors.length > 0 && <div className="artifact-errors" role="status"><strong>Biểu đồ bị bỏ qua</strong>{visualErrors.map(([kind, reason]) => <span key={kind}>{kind}: {String(reason)}</span>)}</div>}
+    </section>
+  </section>;
 }
 
 export function JobDetail({ id, go, startJob }) {
