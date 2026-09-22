@@ -83,6 +83,11 @@ def public_job(row):
             "report_id": row["id"] if row["status"] == "succeeded" else None}
 
 
+def run_metadata(row):
+    return {"run_id": row["id"], "data_as_of": row["data_as_of"],
+            "model_version": row["model_version"], "source_version": row["source_version"]}
+
+
 @app.get("/health/live")
 def live():
     return {"status": "ok"}
@@ -110,7 +115,8 @@ def scan_latest():
     with connect() as db:
         row = latest_run(db)
         return {key: row[key] for key in ("id", "slot", "trading_date", "status", "data_as_of",
-                                           "published_at", "universe_count", "analyzed_count", "failed_count")}
+                                           "published_at", "universe_count", "analyzed_count", "failed_count",
+                                           "model_version", "source_version")}
 
 
 @app.get("/api/v1/scans/status")
@@ -162,7 +168,7 @@ def scan_results(q: str = "", exchange: str | None = None, recommendation: str |
         raise HTTPException(422, "page/page_size không hợp lệ")
     with connect() as db:
         run = latest_run(db)
-    return {"run_id": run["id"], "data_as_of": run["data_as_of"],
+    return {**run_metadata(run),
             **query_results(run["id"], q, exchange, recommendation, gate_pass, sector,
                             score_min, score_max, sort, order, page, page_size)}
 
@@ -173,7 +179,7 @@ def scan_facets():
         run = latest_run(db)
         rows = db.execute("SELECT summary_json FROM scan_results WHERE run_id=?", (run["id"],)).fetchall()
     summaries = [loads(row["summary_json"], {}) for row in rows]
-    return {"run_id": run["id"], **{
+    return {**run_metadata(run), **{
         key: sorted({str(item[key]) for item in summaries if item.get(key) not in (None, "")})
         for key in ("exchange", "recommendation", "sector")}}
 
@@ -193,9 +199,9 @@ def scan_ohlcv(symbol: str, limit: int = 260):
     if not bars:
         raise HTTPException(404, detail={"code": "OHLCV_UNAVAILABLE", "message": "Không có OHLCV cho mã"})
     summary = loads(row["summary_json"])
-    return {"symbol": symbol, "exchange": summary.get("exchange"), "run_id": run["id"],
-            "data_as_of": run["data_as_of"], "adjustment": "provider", "price_unit": "VND",
-            "volume_unit": "shares", "source_meta": {"kind": "scan_snapshot"}, "bars": bars}
+    return {"symbol": symbol, "exchange": summary.get("exchange"), **run_metadata(run),
+            "adjustment": "provider", "price_unit": "VND", "volume_unit": "shares",
+            "source_meta": {"kind": "scan_snapshot", "provider": run["source_version"]}, "bars": bars}
 
 
 @app.get("/api/v1/scans/latest/results/{symbol}")
@@ -207,7 +213,7 @@ def scan_detail(symbol: str):
                          (run["id"], symbol)).fetchone()
     if not row:
         raise HTTPException(404, "Không tìm thấy mã")
-    return {"run_id": run["id"], "data_as_of": run["data_as_of"], **loads(row["detail_json"], {})}
+    return {**run_metadata(run), **loads(row["detail_json"], {})}
 
 
 @app.get("/api/v1/market/overview")
@@ -416,10 +422,10 @@ def admin_run_results(run_id: str, x_admin_key: str | None = Header(default=None
     if page < 1 or not 1 <= page_size <= 100:
         raise HTTPException(422, "page/page_size không hợp lệ")
     with connect() as db:
-        run = db.execute("SELECT id,data_as_of FROM scan_runs WHERE id=?", (run_id,)).fetchone()
+        run = db.execute("SELECT id,data_as_of,model_version,source_version FROM scan_runs WHERE id=?", (run_id,)).fetchone()
     if not run:
         raise HTTPException(404, "Không tìm thấy bản quét")
-    return {"run_id": run_id, "data_as_of": run["data_as_of"],
+    return {**run_metadata(run),
             **query_results(run_id, q, exchange, recommendation, gate_pass, sector,
                             score_min, score_max, sort, order, page, page_size)}
 
@@ -429,11 +435,12 @@ def admin_run_result(run_id: str, symbol: str, x_admin_key: str | None = Header(
     admin_or_403(x_admin_key)
     symbol = symbol_or_400(symbol)
     with connect() as db:
+        run = db.execute("SELECT id,data_as_of,model_version,source_version FROM scan_runs WHERE id=?", (run_id,)).fetchone()
         row = db.execute("SELECT detail_json,ohlcv_json FROM scan_results WHERE run_id=? AND symbol=?",
                          (run_id, symbol)).fetchone()
-    if not row:
+    if not run or not row:
         raise HTTPException(404, "Không tìm thấy kết quả mã")
-    return {"run_id": run_id, **loads(row["detail_json"], {}), "ohlcv": loads(row["ohlcv_json"], [])}
+    return {**run_metadata(run), **loads(row["detail_json"], {}), "ohlcv": loads(row["ohlcv_json"], [])}
 
 
 @app.get("/api/v1/admin/jobs")

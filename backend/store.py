@@ -64,6 +64,7 @@ def init_db():
           data_as_of TEXT, universe_count INTEGER NOT NULL DEFAULT 0,
           analyzed_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
           index_json TEXT, error TEXT, rerun_of TEXT,
+          model_version TEXT, source_version TEXT, config_json TEXT,
           UNIQUE(trading_date, slot, attempt)
         );
         CREATE TABLE IF NOT EXISTS scan_results (
@@ -117,6 +118,12 @@ def init_db():
         run_columns = {row[1] for row in db.execute("PRAGMA table_info(scan_runs)")}
         if "rerun_of" not in run_columns:
             db.execute("ALTER TABLE scan_runs ADD COLUMN rerun_of TEXT")
+        if "model_version" not in run_columns:
+            db.execute("ALTER TABLE scan_runs ADD COLUMN model_version TEXT")
+        if "source_version" not in run_columns:
+            db.execute("ALTER TABLE scan_runs ADD COLUMN source_version TEXT")
+        if "config_json" not in run_columns:
+            db.execute("ALTER TABLE scan_runs ADD COLUMN config_json TEXT")
 
 
 def new_session() -> str:

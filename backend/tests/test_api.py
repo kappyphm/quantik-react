@@ -139,11 +139,14 @@ class ApiQueueTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'Độ phủ'):
                 run_scan(job)
         with connect() as db:
-            run = db.execute('SELECT status,analyzed_count,failed_count FROM scan_runs WHERE id=?',
+            run = db.execute('SELECT status,analyzed_count,failed_count,model_version,source_version,config_json FROM scan_runs WHERE id=?',
                              (created['run_id'],)).fetchone()
             count = db.execute('SELECT COUNT(*) FROM scan_results WHERE run_id=?', (created['run_id'],)).fetchone()[0]
             latest = db.execute("SELECT run_id FROM publication WHERE key='latest'").fetchone()[0]
         self.assertEqual((run['status'], run['analyzed_count'], run['failed_count'], count), ('failed', 1, 1, 2))
+        self.assertEqual(run['model_version'], 'quant-engine-v7-copy')
+        self.assertTrue(run['source_version'].startswith('vnstock-'))
+        self.assertEqual(json.loads(run['config_json'])['min_coverage'], 0.8)
         self.assertNotEqual(latest, created['run_id'])
         with connect(write=True) as db:
             db.execute("UPDATE jobs SET status='cancelled' WHERE id=?", (created['job_id'],))

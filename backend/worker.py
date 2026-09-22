@@ -11,6 +11,7 @@ import traceback
 import threading
 import uuid
 from datetime import date
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from runtime_env import load_project_env
@@ -61,7 +62,20 @@ def run_scan(job):
         update_job(job["id"], "done", 100, "Bản quét đã công bố", status="succeeded")
         return
     with connect(write=True) as db:
-        db.execute("UPDATE scan_runs SET status='running',started_at=? WHERE id=?", (now(), run_id))
+        try:
+            source_version = f"vnstock-{version('vnstock')}"
+        except PackageNotFoundError:
+            source_version = "vnstock-unknown"
+        scan_config = {
+            "fetch_interval_seconds": float(os.getenv("QUANTIK_FETCH_INTERVAL_SECONDS", "1.5")),
+            "min_coverage": float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80")),
+            "min_fresh_coverage": float(os.getenv("QUANTIK_MIN_FRESH_COVERAGE", "0.75")),
+            "max_data_age_days": int(os.getenv("QUANTIK_MAX_DATA_AGE_DAYS", "7")),
+        }
+        db.execute("""UPDATE scan_runs SET status='running',started_at=?,model_version=?,
+                      source_version=?,config_json=? WHERE id=?""",
+                   (now(), os.getenv("QUANTIK_MODEL_VERSION", "quant-engine-v7-copy"),
+                    source_version, dumps(scan_config), run_id))
 
     def progress(phase, pct, message):
         update_job(job["id"], phase, pct, message)
