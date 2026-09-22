@@ -34,9 +34,14 @@ def run_scan(job):
     def progress(phase, pct, message):
         update_job(job["id"], phase, pct, message)
 
+    def universe_ready(count):
+        with connect(write=True) as db:
+            db.execute("UPDATE scan_runs SET universe_count=? WHERE id=?", (count, run_id))
+
     try:
         result = scan_all(progress, symbols=params.get("symbols"),
-                          checkpoint_dir=ARTIFACT_ROOT.parent / "scan_cache" / run_id)
+                          checkpoint_dir=ARTIFACT_ROOT.parent / "scan_cache" / run_id,
+                          universe_ready=universe_ready)
         coverage = result["analyzed_count"] / max(1, result["universe_count"])
         min_coverage = float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80"))
         if coverage < min_coverage:

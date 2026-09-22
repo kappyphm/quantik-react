@@ -54,7 +54,7 @@ def screen_frame(symbol, frame):
                   "distribution": distribution, "assessment": assessment})
 
 
-def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None):
+def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, universe_ready=None):
     """Collect all three exchanges, screen each fetched code and batch QUANT once."""
     import pandas as pd
     from quant_engine.quant import QuantPipeline, ScreenerBridge, _simplify_user_summary
@@ -66,6 +66,8 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None):
     universe = list(dict.fromkeys(str(symbol).upper() for symbol in symbols if re.fullmatch(r"[A-Z0-9]{3,5}", str(symbol).upper())))
     if not universe:
         raise RuntimeError("Nguồn dữ liệu không trả danh sách mã; không công bố run rỗng")
+    if universe_ready:
+        universe_ready(len(universe))
     bridge = ScreenerBridge()
     data, failed, screening = {}, {}, {}
     if checkpoint_dir is not None:
@@ -138,7 +140,7 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None):
         report = next((r for r in reports if r.get("symbol") == symbol), None)
         row = summaries.get(symbol, {})
         display = localized.get(symbol, {})
-        error = failed.get(symbol) or (report or {}).get("error")
+        error = failed.get(symbol) or screening.get(symbol, {}).get("error") or (report or {}).get("error")
         action = str(row.get("Action") or "UNKNOWN")
         summary = {
             "symbol": symbol, "name": symbol, "exchange": exchanges.get(symbol, "UNKNOWN"),

@@ -68,6 +68,10 @@ class ApiQueueTest(unittest.TestCase):
             with client.stream('GET', f"/api/v1/quant/jobs/{created['job_id']}/events") as response:
                 response.read()
                 self.assertIn('event: job.succeeded', response.text)
+            os.environ['QUANTIK_ALLOW_DEMO'] = 'false'
+            self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 0)
+            self.assertEqual(client.get('/api/v1/quant/reports').json()['total'], 0)
+            os.environ['QUANTIK_ALLOW_DEMO'] = 'true'
 
     def test_demo_publication_requires_explicit_opt_in(self):
         previous = os.environ.get('QUANTIK_ALLOW_DEMO')

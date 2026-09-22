@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CandlestickSeries, createChart, HistogramSeries } from 'lightweight-charts';
-import { demoBars } from '../demoPrices.js';
 
 const ranges = [['1M', 22], ['3M', 66], ['1Y', 260]];
 const format = value => Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
-export default function PriceChart({ symbol, score, ohlcvBars, sourceLabel = 'DỮ LIỆU MẪU' }) {
+export default function PriceChart({ symbol, ohlcvBars, sourceLabel = 'SNAPSHOT ĐÃ CÔNG BỐ' }) {
   const host = useRef(null);
   const chartRef = useRef(null);
   const [range, setRange] = useState('3M');
-  const bars = useMemo(() => ohlcvBars?.length ? ohlcvBars : demoBars(symbol, score), [symbol, score, ohlcvBars]);
+  const bars = useMemo(() => ohlcvBars || [], [ohlcvBars]);
   const [active, setActive] = useState(bars.at(-1));
 
   useEffect(() => {
@@ -47,6 +46,6 @@ export default function PriceChart({ symbol, score, ohlcvBars, sourceLabel = 'D�
     <div className="price-chart-head"><div><strong>{symbol}</strong><span>OHLCV / {sourceLabel}</span></div><div className="range-switch" aria-label="Khoảng thời gian biểu đồ">{ranges.map(([label]) => <button key={label} className={range === label ? 'active' : ''} onClick={() => setRange(label)}>{label}</button>)}</div></div>
     <div className="ohlcv-strip"><span>{active?.time}</span><span>O <b>{format(active?.open)}</b></span><span>H <b>{format(active?.high)}</b></span><span>L <b>{format(active?.low)}</b></span><span>C <b className={active?.close >= active?.open ? 'positive' : 'negative'}>{format(active?.close)}</b></span><span>VOL <b>{active?.volume?.toLocaleString('vi-VN')}</b></span></div>
     <div className="price-chart-canvas" ref={host} role="img" aria-label={`Biểu đồ nến OHLCV của ${symbol}`} />
-    <div className="price-chart-foot"><span>Biểu đồ tạo bằng Lightweight Charts™</span><span>{sourceLabel === 'DỮ LIỆU MẪU' ? 'Giá và khối lượng đang hiển thị là số liệu giả lập' : sourceLabel}</span></div>
+    <div className="price-chart-foot"><span>Biểu đồ tạo bằng Lightweight Charts™</span><span>{sourceLabel}</span></div>
   </div>;
 }

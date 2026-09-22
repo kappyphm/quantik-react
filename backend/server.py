@@ -73,10 +73,12 @@ def owned_job(db, job_id: str, owner: str):
 
 
 def public_job(row):
+    params = loads(row["params_json"], {})
     return {"id": row["id"], "job_id": row["id"], "symbol": row["symbol"],
             "status": row["status"], "phase": row["phase"], "progress_pct": row["progress_pct"],
             "requested_at": row["created_at"], "started_at": row["started_at"],
             "finished_at": row["finished_at"], "error": row["error"],
+            "reference_run_id": params.get("reference_run_id"),
             "report_id": row["id"] if row["status"] == "succeeded" else None}
 
 
@@ -249,11 +251,15 @@ def list_quant_jobs(request: Request, symbol: str | None = None, page: int = 1, 
         raise HTTPException(422, "page/page_size không hợp lệ")
     if symbol:
         symbol = symbol_or_400(symbol)
+    allow_demo = int(os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() == "true")
     with connect() as db:
-        rows = db.execute("SELECT * FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?) ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                          (owner, symbol, symbol, page_size, (page - 1) * page_size)).fetchall()
-        total = db.execute("SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)",
-                           (owner, symbol, symbol)).fetchone()[0]
+        rows = db.execute("""SELECT * FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
+                             AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')
+                             ORDER BY created_at DESC LIMIT ? OFFSET ?""",
+                          (owner, symbol, symbol, allow_demo, page_size, (page - 1) * page_size)).fetchall()
+        total = db.execute("""SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
+                              AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')""",
+                           (owner, symbol, symbol, allow_demo)).fetchone()[0]
     return {"items": [public_job(row) for row in rows], "total": total, "page": page, "page_size": page_size}
 
 
@@ -313,10 +319,13 @@ def list_reports(request: Request, symbol: str | None = None):
     owner = owner_or_401(request)
     if symbol:
         symbol = symbol_or_400(symbol)
+    allow_demo = int(os.getenv("QUANTIK_ALLOW_DEMO", "false").lower() == "true")
     with connect() as db:
         rows = db.execute("""SELECT * FROM jobs WHERE kind='quant' AND status='succeeded' AND owner=?
-                             AND (? IS NULL OR symbol=?) ORDER BY finished_at DESC""",
-                          (owner, symbol, symbol)).fetchall()
+                             AND (? IS NULL OR symbol=?)
+                             AND (?=1 OR COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%')
+                             ORDER BY finished_at DESC""",
+                          (owner, symbol, symbol, allow_demo)).fetchall()
     return {"items": [public_job(row) for row in rows], "total": len(rows)}
 
 
