@@ -54,6 +54,16 @@ def screen_frame(symbol, frame):
                   "distribution": distribution, "assessment": assessment})
 
 
+def analysis_status(error: str | None) -> str:
+    if not error:
+        return "completed"
+    if error.startswith("Liquidity gate failed"):
+        return "screened_out"
+    if error.startswith(("NO_OHLCV", "Insufficient data", "Data quality failed")):
+        return "insufficient_data"
+    return "failed"
+
+
 def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, universe_ready=None):
     """Collect all three exchanges, screen each fetched code and batch QUANT once."""
     import pandas as pd
@@ -141,25 +151,28 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
         row = summaries.get(symbol, {})
         display = localized.get(symbol, {})
         error = failed.get(symbol) or screening.get(symbol, {}).get("error") or (report or {}).get("error")
-        action = str(row.get("Action") or "UNKNOWN")
+        status = analysis_status(error)
+        action = str(row.get("Action") or "UNKNOWN") if status == "completed" else None
         summary = {
             "symbol": symbol, "name": symbol, "exchange": exchanges.get(symbol, "UNKNOWN"),
-            "recommendation": display.get("Khuyến nghị") or action,
-            "gate_pass": bool(row.get("GatePass", False)),
-            "gate_explanation": display.get("Giải thích điều kiện") or error or "",
-            "score": row.get("Score"), "rating": display.get("Đánh giá") or "Chưa đánh giá",
-            "hold_plan": display.get("Thời gian nắm giữ") or "—",
-            "vni_trend": display.get("Xu hướng VN-Index") or "—",
-            "sector": display.get("Nhóm ngành") or "Không xác định",
-            "sector_trend": display.get("Xu hướng ngành") or "—",
-            "analysis_status": "failed" if error else "completed",
+            "recommendation": (display.get("Khuyến nghị") or action) if status == "completed" else None,
+            "gate_pass": bool(row.get("GatePass", False)) if status == "completed" else False,
+            "gate_explanation": (display.get("Giải thích điều kiện") or "") if status == "completed" else error,
+            "score": row.get("Score") if status == "completed" else None,
+            "rating": (display.get("Đánh giá") or "Chưa đánh giá") if status == "completed" else None,
+            "hold_plan": display.get("Thời gian nắm giữ") if status == "completed" else None,
+            "vni_trend": display.get("Xu hướng VN-Index"),
+            "sector": display.get("Nhóm ngành"),
+            "sector_trend": display.get("Xu hướng ngành"),
+            "analysis_status": status,
         }
         detail = {**summary, "raw_action": action, "screener": screening.get(symbol, {}),
                   "quant": clean(report) if report else {}, "commentary": row.get("Analysis") or "",
                   "error": error, "source_meta": {"ohlcv": data[symbol].attrs.get("source") if symbol in data else None}}
         results.append((summary, detail, bars_from_frame(data[symbol]) if symbol in data else []))
-    return {"universe_count": len(universe), "analyzed_count": sum(r[0]["analysis_status"] == "completed" for r in results),
-            "failed_count": sum(r[0]["analysis_status"] == "failed" for r in results),
+    return {"universe_count": len(universe),
+            "analyzed_count": sum(r[0]["analysis_status"] in ("completed", "screened_out") for r in results),
+            "failed_count": sum(r[0]["analysis_status"] in ("failed", "insufficient_data") for r in results),
             "index_bars": bars_from_frame(index_frame) if index_frame is not None else [],
             "data_as_of": max((bars[-1]["time"] for _, _, bars in results if bars), default=None),
             "results": results}

@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
+import shutil
 import time
 import traceback
 import threading
@@ -24,7 +26,7 @@ def run_scan(job):
     params = loads(job["params_json"], {})
     run_id = params["run_id"]
     with connect() as db:
-        existing = db.execute("SELECT status FROM scan_runs WHERE id=?", (run_id,)).fetchone()
+        existing = db.execute("SELECT status,rerun_of FROM scan_runs WHERE id=?", (run_id,)).fetchone()
     if existing and existing["status"] == "published":
         update_job(job["id"], "done", 100, "Bản quét đã công bố", status="succeeded")
         return
@@ -39,8 +41,23 @@ def run_scan(job):
             db.execute("UPDATE scan_runs SET universe_count=? WHERE id=?", (count, run_id))
 
     try:
+        cache_root = ARTIFACT_ROOT.parent / "scan_cache"
+        checkpoint_dir = cache_root / run_id
+        if existing and existing["rerun_of"]:
+            previous_dir = cache_root / existing["rerun_of"]
+            if previous_dir.is_dir():
+                checkpoint_dir.mkdir(parents=True, exist_ok=True)
+                copied = 0
+                for source in previous_dir.iterdir():
+                    if not source.is_file() or not re.fullmatch(r"[A-Z0-9]{3,5}\.(csv|source)", source.name):
+                        continue
+                    target = checkpoint_dir / source.name
+                    if not target.exists():
+                        shutil.copy2(source, target)
+                        copied += 1
+                progress("collecting", 4, f"Dùng lại {copied} file dữ liệu của lượt quét gốc")
         result = scan_all(progress, symbols=params.get("symbols"),
-                          checkpoint_dir=ARTIFACT_ROOT.parent / "scan_cache" / run_id,
+                          checkpoint_dir=checkpoint_dir,
                           universe_ready=universe_ready)
         with connect(write=True) as db:
             for summary, detail, bars in result["results"]:
