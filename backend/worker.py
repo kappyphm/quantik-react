@@ -10,6 +10,7 @@ import time
 import traceback
 import threading
 import uuid
+from datetime import date
 from pathlib import Path
 
 from runtime_env import load_project_env
@@ -20,6 +21,34 @@ from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now,
 
 log = logging.getLogger("quantik.worker")
 ARTIFACT_ROOT = Path(os.getenv("QUANTIK_ARTIFACT_ROOT", Path(__file__).resolve().parent / "data" / "artifacts"))
+
+
+def validate_scan_result(result: dict, slot: str, trading_date: str):
+    universe = max(1, result["universe_count"])
+    coverage = result["analyzed_count"] / universe
+    min_coverage = float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80"))
+    if coverage < min_coverage:
+        raise RuntimeError(f"Độ phủ {coverage:.1%} thấp hơn ngưỡng {min_coverage:.1%}; run không được công bố")
+    if not result["index_bars"]:
+        raise RuntimeError("Thiếu OHLCV VN-Index; run không được công bố")
+    index_date = date.fromisoformat(result["index_bars"][-1]["time"][:10])
+    requested_date = date.fromisoformat(trading_date)
+    age = (requested_date - index_date).days
+    max_age = int(os.getenv("QUANTIK_MAX_DATA_AGE_DAYS", "7"))
+    if age < 0 or age > max_age:
+        raise RuntimeError(f"VN-Index có ngày dữ liệu {index_date} không hợp lệ cho {trading_date}")
+    if slot == "POST_CLOSE" and index_date != requested_date:
+        raise RuntimeError(f"POST_CLOSE thiếu dữ liệu phiên {trading_date}; VN-Index đến {index_date}")
+    if slot == "PRE_OPEN" and index_date >= requested_date:
+        raise RuntimeError(f"PRE_OPEN không được dùng dữ liệu phiên {trading_date}")
+    if result["data_as_of"] != index_date.isoformat():
+        raise RuntimeError(f"Ngày dữ liệu mã ({result['data_as_of']}) không khớp VN-Index ({index_date})")
+    fresh = sum(summary.get("analysis_status") in ("completed", "screened_out")
+                and bars and bars[-1]["time"][:10] == index_date.isoformat()
+                for summary, _, bars in result["results"])
+    min_fresh = float(os.getenv("QUANTIK_MIN_FRESH_COVERAGE", "0.75"))
+    if fresh / universe < min_fresh:
+        raise RuntimeError(f"Chỉ {fresh}/{universe} mã có dữ liệu cùng ngày với VN-Index; cần {min_fresh:.0%}")
 
 
 def run_scan(job):
@@ -70,12 +99,9 @@ def run_scan(job):
                           failed_count=?,index_json=? WHERE id=?""",
                        (result["data_as_of"], result["universe_count"], result["analyzed_count"],
                         result["failed_count"], dumps(result["index_bars"]), run_id))
-        coverage = result["analyzed_count"] / max(1, result["universe_count"])
-        min_coverage = float(os.getenv("QUANTIK_MIN_COVERAGE", "0.80"))
-        if coverage < min_coverage:
-            raise RuntimeError(f"Độ phủ {coverage:.1%} thấp hơn ngưỡng {min_coverage:.1%}; run không được công bố")
-        if not result["index_bars"]:
-            raise RuntimeError("Thiếu OHLCV VN-Index; run không được công bố")
+        with connect() as db:
+            scan_slot = db.execute("SELECT slot,trading_date FROM scan_runs WHERE id=?", (run_id,)).fetchone()
+        validate_scan_result(result, scan_slot["slot"], scan_slot["trading_date"])
         with connect(write=True) as db:
             db.execute("UPDATE scan_runs SET status='published',published_at=? WHERE id=?", (now(), run_id))
             db.execute("""INSERT INTO publication(key,run_id) VALUES ('latest',?)
