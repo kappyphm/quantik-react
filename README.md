@@ -57,6 +57,17 @@ Trang `/admin` dùng `QUANTIK_ADMIN_KEY` trong `.env`. Nhập khóa vào form đ
 
 Nếu API hoặc frontend đã chạy ở cổng 8000/5173, dùng tiến trình hiện có; không mở thêm một bản cùng cổng.
 
+## Chạy trọn hệ thống bằng Docker Compose
+
+Chuẩn bị `.env` như trên, sau đó chạy tại thư mục gốc:
+
+```bat
+docker compose up -d --build
+docker compose ps
+```
+
+Mở `http://localhost:8080` (đổi bằng `QUANTIK_WEB_PORT` trong môi trường host). Compose chạy riêng `web`, `api`, `worker`, `scheduler`; SQLite, checkpoint và biểu đồ nằm trong volume `quantik-data`. Nginx phục vụ React và chuyển tiếp `/api`, gồm cả SSE. Xem log bằng `docker compose logs -f api worker scheduler`; dừng bằng `docker compose down`. Không thêm `-v` khi dừng nếu muốn giữ database và checkpoint.
+
 Nếu backend không sẵn sàng, giao diện báo lỗi kết nối. Bản demo đã được lưu tại tag Git `demo-stable-2026-09-22`.
 
 ## Endpoint chính
