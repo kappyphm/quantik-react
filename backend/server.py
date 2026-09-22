@@ -263,8 +263,14 @@ def create_quant_job(body: QuantRequest, request: Request,
     symbol = symbol_or_400(body.symbol)
     with connect() as db:
         run = latest_run(db)
-        if not db.execute("SELECT 1 FROM scan_results WHERE run_id=? AND symbol=?", (run["id"], symbol)).fetchone():
+        result = db.execute("SELECT summary_json,ohlcv_json FROM scan_results WHERE run_id=? AND symbol=?",
+                            (run["id"], symbol)).fetchone()
+        if not result:
             raise HTTPException(404, "Mã chưa có trong bản quét")
+        summary, bars = loads(result["summary_json"], {}), loads(result["ohlcv_json"], [])
+        if not run["id"].startswith("DEMO-") and (summary.get("analysis_status") != "completed" or len(bars) < 30):
+            raise HTTPException(409, detail={"code": "ANALYSIS_UNAVAILABLE",
+                                             "message": summary.get("gate_explanation") or "Mã không đủ điều kiện chạy QUANT"})
     try:
         row = new_job("quant", owner, symbol,
                       {"include_backtest": body.include_backtest, "reference_run_id": run["id"]},

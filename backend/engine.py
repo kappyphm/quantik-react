@@ -196,26 +196,50 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
             "results": results}
 
 
-def quant_one(symbol, progress, output_dir: Path, include_backtest=True):
+def _quant_with_frames(symbol, frame, index, exchange, progress, output_dir: Path,
+                       include_backtest=True, source_mode="live_fetch"):
     from quant_engine.quant import QuantPipeline, ScreenerBridge
     from quant_engine.quant_visuals import generate_quant_visuals
 
+    progress("models", 35, "Đang chạy các mô hình định lượng")
+    report = QuantPipeline().batch({symbol: frame}, idx_df=index, exchange_map={symbol: exchange})[0]
+    if report.get("error"):
+        raise RuntimeError(report["error"])
+    progress("risk", 75, "Đang tổng hợp rủi ro và báo cáo")
+    presentation = present_report(report, frame)
+    presentation["score_comparable"] = False  # Batch một mã không có phân phối toàn sàn.
+    presentation["score_comparability_reason"] = "Job một mã không chạy lại phân phối cross-sectional toàn sàn."
+    presentation["include_backtest"] = include_backtest
+    presentation["data_source_mode"] = source_mode
+    progress("visual", 89, "Đang tạo biểu đồ QUANT")
+    visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
+                                     report=report, price_data=frame)
+    return presentation, visuals, bars_from_frame(frame)
+
+
+def frame_from_bars(bars):
+    import pandas as pd
+    frame = pd.DataFrame(bars)
+    if frame.empty or not {"time", "open", "high", "low", "close", "volume"}.issubset(frame.columns):
+        raise RuntimeError("Snapshot không có OHLCV hợp lệ")
+    frame["time"] = pd.to_datetime(frame["time"], errors="raise")
+    return frame.set_index("time").sort_index()
+
+
+def quant_from_snapshot(symbol, bars, index_bars, exchange, progress, output_dir: Path, include_backtest=True):
+    progress("fetch", 12, "Đọc OHLCV và VN-Index từ snapshot đã công bố")
+    return _quant_with_frames(symbol, frame_from_bars(bars), frame_from_bars(index_bars), exchange,
+                              progress, output_dir, include_backtest, "published_scan_snapshot")
+
+
+def quant_one(symbol, progress, output_dir: Path, include_backtest=True):
+    from quant_engine.quant import ScreenerBridge
     bridge = ScreenerBridge()
     progress("fetch", 12, "Đang tải OHLCV và VN-Index")
     data = bridge.fetch_ohlcv([symbol], days=252)
     if symbol not in data:
         raise RuntimeError(f"Không lấy được OHLCV cho {symbol}")
     index = bridge.fetch_index("VNINDEX", days=252)
-    exchange = bridge.fetch_exchange_map([symbol])
-    progress("models", 35, "Đang chạy các mô hình định lượng")
-    report = QuantPipeline().batch(data, idx_df=index, exchange_map=exchange)[0]
-    if report.get("error"):
-        raise RuntimeError(report["error"])
-    progress("risk", 75, "Đang tổng hợp rủi ro và báo cáo")
-    presentation = present_report(report, data[symbol])
-    presentation["score_comparable"] = False  # Batch một mã không có phân phối toàn sàn.
-    presentation["include_backtest"] = include_backtest
-    progress("visual", 89, "Đang tạo biểu đồ QUANT")
-    visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
-                                     report=report, price_data=data[symbol])
-    return presentation, visuals, bars_from_frame(data[symbol])
+    exchange = bridge.fetch_exchange_map([symbol]).get(symbol, "UNKNOWN")
+    return _quant_with_frames(symbol, data[symbol], index, exchange, progress, output_dir,
+                              include_backtest, "live_fetch")

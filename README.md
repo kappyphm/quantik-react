@@ -107,6 +107,7 @@ OpenAPI tại `http://localhost:8000/docs`.
 - Đã kiểm thử luồng FPT thật: quét, tạo job qua API, chạy quant-core, báo cáo và tải đủ 7 ảnh. Chưa xác nhận một đợt toàn sàn đủ 1.430 mã hoàn tất và đạt ngưỡng công bố trên máy hiện tại. Bảng điện là dữ liệu theo thời điểm nhà cung cấp trả về, không cam kết realtime.
 - Backend hiện dùng SQLite và một worker, phù hợp tích hợp nội bộ. Chưa có tài khoản đăng nhập, phân quyền quản trị nhiều người, retry phân tán, hay PostgreSQL/Redis. Cần xác nhận quyền sử dụng nguồn dữ liệu trước khi công bố công khai.
 - `include_backtest` kiểm định các tín hiệu MUA từ snapshot thật đã công bố theo nguyên tắc point-in-time: vào ở giá đóng cửa phiên kế tiếp, thoát sau số phiên cấu hình và trừ chi phí khứ hồi. Báo cáo chỉ trả chỉ số hiệu quả khi có ít nhất `QUANTIK_BACKTEST_MIN_SAMPLES` mẫu đã hoàn tất (mặc định 5); trước đó trả `insufficient_history`, không sinh số liệu giả.
+- Job QUANT đọc OHLCV, VN-Index và sàn trực tiếp từ `reference_run_id` đã công bố; báo cáo ghi `data_source_mode=published_scan_snapshot`. API từ chối tạo job cho mã không có kết quả `completed` hoặc thiếu OHLCV, nên worker không fetch lại một snapshot khác với trang chi tiết. Điểm job một mã vẫn ghi `score_comparable=false` và lý do vì không chạy lại phân phối cross-sectional toàn sàn.
 
 Kiểm tra frontend: `pnpm build`. Kiểm tra API/queue: `cd backend && .venv\Scripts\python.exe -m unittest discover -s tests -v`. Kiểm tra nguồn thật trên database tạm: `cd backend && .venv\Scripts\python.exe tests\live_smoke.py`.
 

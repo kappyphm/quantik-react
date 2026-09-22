@@ -16,7 +16,7 @@ from pathlib import Path
 from runtime_env import load_project_env
 
 load_project_env()
-from engine import quant_one, scan_all
+from engine import quant_from_snapshot, quant_one, scan_all
 from backtest_service import recommendation_backtest
 from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now, update_job
 
@@ -142,7 +142,22 @@ def run_quant(job):
     if current_run and current_run.startswith("DEMO-"):
         report, visuals = demo_quant(job, current_run, progress)
     else:
-        report, visuals, current_bars = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
+        snapshot = None
+        if current_run:
+            with connect() as db:
+                snapshot = db.execute("""SELECT s.summary_json,s.ohlcv_json,r.index_json
+                                         FROM scan_results s JOIN scan_runs r ON r.id=s.run_id
+                                         WHERE s.run_id=? AND s.symbol=? AND r.status='published'""",
+                                      (current_run, symbol)).fetchone()
+        if snapshot:
+            summary = loads(snapshot["summary_json"], {})
+            current_bars = loads(snapshot["ohlcv_json"], [])
+            report, visuals, current_bars = quant_from_snapshot(
+                symbol, current_bars, loads(snapshot["index_json"], []),
+                summary.get("exchange", "UNKNOWN"), progress, output_dir,
+                params.get("include_backtest", True))
+        else:
+            report, visuals, current_bars = quant_one(symbol, progress, output_dir, params.get("include_backtest", True))
         report["analysis_mode"] = "quant_core"
     report["job_id"] = job["id"]
     report["reference_run_id"] = current_run

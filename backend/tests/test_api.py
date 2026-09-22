@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
 import server
+import worker
 from server import app
 from store import connect, create_scan, dumps, init_db, new_job, now, update_job
 from worker import process_one, run_scan
@@ -194,6 +195,35 @@ class ApiQueueTest(unittest.TestCase):
                 blocked = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'})
                 self.assertEqual(blocked.status_code, 429)
                 client.delete(f"/api/v1/quant/jobs/{first.json()['job_id']}")
+
+    def test_quant_job_reads_the_published_snapshot(self):
+        bars = [{'time': (date(2026, 3, 1) + timedelta(days=index)).isoformat(),
+                 'open': 100 + index, 'high': 102 + index, 'low': 99 + index,
+                 'close': 101 + index, 'volume': 1000 + index} for index in range(35)]
+        summary = {'symbol': 'FPT', 'exchange': 'HOSE', 'recommendation': 'MUA',
+                   'analysis_status': 'completed'}
+        with connect(write=True) as db:
+            db.execute("""INSERT INTO scan_runs(id,trading_date,slot,attempt,status,created_at,published_at,
+                          data_as_of,index_json) VALUES ('REAL-SNAPSHOT','2026-04-04','MANUAL',1,'published',?,?,?,?)""",
+                       (now(), now(), bars[-1]['time'], dumps(bars)))
+            db.execute("INSERT INTO scan_results(run_id,symbol,summary_json,detail_json,ohlcv_json) VALUES (?,?,?,?,?)",
+                       ('REAL-SNAPSHOT', 'FPT', dumps(summary), dumps(summary), dumps(bars)))
+            db.execute("UPDATE publication SET run_id='REAL-SNAPSHOT' WHERE key='latest'")
+        try:
+            with TestClient(app) as client:
+                client.post('/api/v1/session')
+                created = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'}).json()
+                fake_report = {'symbol': 'FPT', 'as_of': bars[-1]['time'],
+                               'data_source_mode': 'published_scan_snapshot'}
+                with patch.object(worker, 'quant_from_snapshot', return_value=(fake_report, {'generated': [], 'skipped': {}}, bars)) as run:
+                    self.assertTrue(process_one())
+                self.assertEqual(run.call_args.args[1], bars)
+                report = client.get(f"/api/v1/quant/reports/{created['job_id']}").json()
+                self.assertEqual(report['data_source_mode'], 'published_scan_snapshot')
+                self.assertEqual(report['reference_run_id'], 'REAL-SNAPSHOT')
+        finally:
+            with connect(write=True) as db:
+                db.execute("UPDATE publication SET run_id='DEMO-TEST' WHERE key='latest'")
 
 
 if __name__ == '__main__':
