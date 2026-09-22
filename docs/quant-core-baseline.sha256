@@ -1,0 +1,5 @@
+SHA256  quant-core -> backend/quant_engine (2026-09-22)
+fce492f6ce2f63806e344b96b0cb0624b45aaf4e5b8c80b91e58fad160a45a60  quant.py
+dd3d5029bde57eb4b557a46cfbf82eeed3953bf8da8abfa3f71c33a6243c3b10  crawl_data.py
+e7c68a31349bf1f5873093cad5432d652cdf3280f358624e5a6aba84a4717fa9  quant_visuals.py
+a6905b839f38069a0e3fd9a8608f46d850d3715a4149ae959ea9b049bc7dcaa2  backtest.py

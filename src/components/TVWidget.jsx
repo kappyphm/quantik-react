@@ -27,18 +27,26 @@ function TVWidget({ name, config }) {
 export default memo(TVWidget);
 
 const common = (theme) => ({ locale: 'vi_VN', colorTheme: theme, theme, isTransparent: true, width: '100%' });
-export const tvSymbol = (sym) => `HOSE:${sym}`;
+export const tvSymbol = (sym, exchange = 'HOSE') => `${exchange}:${sym}`;
 
-export const AdvancedChart = ({ sym, theme, compact }) => (
+export const AdvancedChart = ({ sym, theme, compact, exchange = 'HOSE' }) => (
   <TVWidget
     name="embed-widget-advanced-chart.js"
     config={{
-      ...common(theme), autosize: true, symbol: tvSymbol(sym), interval: 'D', timezone: 'Asia/Ho_Chi_Minh',
+      ...common(theme), autosize: true, symbol: tvSymbol(sym, exchange), interval: 'D', timezone: 'Asia/Ho_Chi_Minh',
       style: '1', allow_symbol_change: false, hide_side_toolbar: !!compact, hide_top_toolbar: !!compact,
       studies: compact ? [] : ['MASimple@tv-basicstudies', 'RSI@tv-basicstudies', 'MACD@tv-basicstudies'],
       support_host: 'https://www.tradingview.com',
     }}
   />
+);
+
+export const MarketOverviewChart = ({ sym, exchange = 'HNX' }) => (
+  <TVWidget name="embed-widget-market-overview.js" config={{
+    colorTheme: 'dark', dateRange: '12M', showChart: true, locale: 'vi_VN',
+    width: '100%', height: '100%', isTransparent: true, showSymbolLogo: false,
+    tabs: [{ title: exchange, symbols: [{ s: tvSymbol(sym, exchange), d: sym }] }],
+  }} />
 );
 
 export const SymbolInfo = ({ sym, theme }) => (
