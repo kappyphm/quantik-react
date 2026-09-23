@@ -287,20 +287,45 @@ def create_quant_job(body: QuantRequest, request: Request,
 
 
 @app.get("/api/v1/quant/jobs")
-def list_quant_jobs(request: Request, symbol: str | None = None, page: int = 1, page_size: int = 20):
+def list_quant_jobs(request: Request, symbol: str | None = None, status: str | None = None,
+                    date_from: str | None = None, date_to: str | None = None,
+                    page: int = 1, page_size: int = 20):
     owner = owner_or_401(request)
     if page < 1 or not 1 <= page_size <= 100:
         raise HTTPException(422, "page/page_size không hợp lệ")
     if symbol:
         symbol = symbol_or_400(symbol)
+    allowed_statuses = {"queued", "running", "succeeded", "failed", "cancelled"}
+    if status and status not in allowed_statuses:
+        raise HTTPException(422, "status không hợp lệ")
+    for label, value in (("date_from", date_from), ("date_to", date_to)):
+        if value:
+            try:
+                datetime.strptime(value, "%Y-%m-%d")
+            except ValueError as exc:
+                raise HTTPException(422, f"{label} không hợp lệ") from exc
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(422, "date_from phải trước hoặc bằng date_to")
+    where = ["kind='quant'", "owner=?",
+             "COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'"]
+    params: list[object] = [owner]
+    if symbol:
+        where.append("symbol=?")
+        params.append(symbol)
+    if status:
+        where.append("status=?")
+        params.append(status)
+    if date_from:
+        where.append("date(created_at)>=?")
+        params.append(date_from)
+    if date_to:
+        where.append("date(created_at)<=?")
+        params.append(date_to)
+    predicate = " AND ".join(where)
     with connect() as db:
-        rows = db.execute("""SELECT * FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
-                             AND COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'
-                             ORDER BY created_at DESC LIMIT ? OFFSET ?""",
-                          (owner, symbol, symbol, page_size, (page - 1) * page_size)).fetchall()
-        total = db.execute("""SELECT COUNT(*) FROM jobs WHERE kind='quant' AND owner=? AND (? IS NULL OR symbol=?)
-                              AND COALESCE(json_extract(params_json,'$.reference_run_id'),'') NOT LIKE 'DEMO-%'""",
-                           (owner, symbol, symbol)).fetchone()[0]
+        rows = db.execute(f"SELECT * FROM jobs WHERE {predicate} ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                          (*params, page_size, (page - 1) * page_size)).fetchall()
+        total = db.execute(f"SELECT COUNT(*) FROM jobs WHERE {predicate}", params).fetchone()[0]
     return {"items": [public_job(row) for row in rows], "total": total, "page": page, "page_size": page_size}
 
 

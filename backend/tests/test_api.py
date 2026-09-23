@@ -62,10 +62,17 @@ class ApiQueueTest(unittest.TestCase):
                 self.assertTrue(process_one())
             job = client.get(f"/api/v1/quant/jobs/{created['job_id']}").json()
             self.assertEqual(job['status'], 'succeeded')
+            job_date = job['requested_at'][:10]
             report = client.get(f"/api/v1/quant/reports/{created['job_id']}").json()
             self.assertEqual(report['analysis_mode'], 'quant_core')
             self.assertEqual(report['reference_run_id'], 'FIXTURE-TEST')
             self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/quant/jobs?symbol=FPT&status=succeeded').json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/quant/jobs?symbol=VCB').json()['total'], 0)
+            self.assertEqual(client.get(f'/api/v1/quant/jobs?date_from={job_date}&date_to={job_date}').json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/quant/jobs?status=unknown').status_code, 422)
+            self.assertEqual(client.get('/api/v1/quant/jobs?date_from=2026-09-31').status_code, 422)
+            self.assertEqual(client.get('/api/v1/quant/jobs?date_from=2026-09-23&date_to=2026-09-22').status_code, 422)
             self.assertEqual(client.get('/api/v1/quant/reports').json()['total'], 1)
             self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results').status_code, 403)
             os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import QuantDiagnostics from './QuantDiagnostics.jsx';
+import Pagination from './Pagination.jsx';
 import './backtest.css';
 
 const fmt = value => value ? new Date(value).toLocaleString('vi-VN') : '—';
@@ -89,8 +90,34 @@ export function JobDetail({ id, go, startJob }) {
 }
 
 export function Reports({ jobs, go }) {
-  const [remote, setRemote] = useState(null);
-  useEffect(() => { fetch('/api/v1/quant/jobs').then(r => r.json()).then(data => setRemote(data.items || [])).catch(() => {}); }, []);
-  const list = remote || jobs;
-  return <div className="page reports-page"><div className="page-heading"><div><div className="eyebrow">QUANT / LỊCH SỬ CÁ NHÂN</div><h1>Báo cáo <span>của tôi</span></h1><p>Job và báo cáo được lưu trên server để bạn quay lại xem.</p></div><span className="demo-label">SERVER</span></div><section className="analysis-panel"><div className="section-title"><span>DANH SÁCH JOB</span><small>{list.length} tác vụ</small></div>{list.length ? <div className="report-list">{[...list].sort((a, b) => (b.createdAt || Date.parse(b.requested_at)) - (a.createdAt || Date.parse(a.requested_at))).map(j => <button key={j.id} onClick={() => go(`/quant/jobs/${j.id}`)}><b className="symbol">{j.symbol}</b><span>{j.id}</span><span>{fmt(j.createdAt || j.requested_at)}</span><span className={j.status === 'succeeded' ? 'positive' : 'amber'}>{j.status === 'succeeded' ? 'Đã hoàn tất' : labels[j.phase] || j.phase}</span><span>↗</span></button>)}</div> : <div className="no-results">Chưa có job nào. <button onClick={() => go('/scan')}>Xem kết quả quét toàn sàn ↗</button></div>}</section></div>;
+  const blank = { symbol: '', status: '', dateFrom: '', dateTo: '' };
+  const [filters, setFilters] = useState(blank);
+  const [query, setQuery] = useState(blank);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [remote, setRemote] = useState({ items: null, total: 0, loading: true, error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+    if (query.symbol) params.set('symbol', query.symbol.trim().toUpperCase());
+    if (query.status) params.set('status', query.status);
+    if (query.dateFrom) params.set('date_from', query.dateFrom);
+    if (query.dateTo) params.set('date_to', query.dateTo);
+    setRemote(old => ({ ...old, loading: true, error: '' }));
+    fetch(`/api/v1/quant/jobs?${params}`, { credentials: 'same-origin', signal: controller.signal })
+      .then(async response => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.detail?.message || body.detail || `HTTP ${response.status}`);
+        return body;
+      })
+      .then(data => setRemote({ items: data.items || [], total: data.total || 0, loading: false, error: '' }))
+      .catch(error => { if (error.name !== 'AbortError') setRemote(old => ({ ...old, loading: false, error: error.message })); });
+    return () => controller.abort();
+  }, [query, page, pageSize]);
+  const list = remote.items ?? jobs;
+  const apply = event => { event.preventDefault(); setPage(1); setQuery({ ...filters }); };
+  const reset = () => { setFilters(blank); setQuery(blank); setPage(1); };
+  return <div className="page reports-page"><div className="page-heading"><div><div className="eyebrow">QUANT / LỊCH SỬ CÁ NHÂN</div><h1>Báo cáo <span>của tôi</span></h1><p>Job và báo cáo được lưu trên server để bạn quay lại xem.</p></div><span className="demo-label">SERVER</span></div><section className="analysis-panel"><div className="section-title"><span>DANH SÁCH JOB</span><small>{remote.total} tác vụ phù hợp</small></div>
+    <form className="report-filters" onSubmit={apply}><label>MÃ CỔ PHIẾU<input value={filters.symbol} maxLength="5" placeholder="FPT" onChange={event => setFilters(old => ({ ...old, symbol: event.target.value.toUpperCase() }))} /></label><label>TRẠNG THÁI<select value={filters.status} onChange={event => setFilters(old => ({ ...old, status: event.target.value }))}><option value="">Tất cả</option><option value="queued">Đang chờ</option><option value="running">Đang xử lý</option><option value="succeeded">Hoàn tất</option><option value="failed">Thất bại</option><option value="cancelled">Đã hủy</option></select></label><label>TỪ NGÀY<input type="date" value={filters.dateFrom} onChange={event => setFilters(old => ({ ...old, dateFrom: event.target.value }))} /></label><label>ĐẾN NGÀY<input type="date" min={filters.dateFrom || undefined} value={filters.dateTo} onChange={event => setFilters(old => ({ ...old, dateTo: event.target.value }))} /></label><button className="primary" type="submit">LỌC</button><button type="button" onClick={reset}>ĐẶT LẠI</button></form>
+    {remote.error && <p className="admin-message" role="alert">Không tải được lịch sử: {remote.error}</p>}{remote.loading && remote.items === null ? <div className="no-results" role="status">Đang tải lịch sử job…</div> : list.length ? <><div className="report-list">{list.map(j => <button key={j.id} onClick={() => go(`/quant/jobs/${j.id}`)}><b className="symbol">{j.symbol}</b><span>{j.id}</span><span>{fmt(j.createdAt || j.requested_at)}</span><span className={j.status === 'succeeded' ? 'positive' : j.status === 'failed' ? 'negative' : 'amber'}>{j.status === 'succeeded' ? 'Đã hoàn tất' : labels[j.phase] || j.phase}</span><span>↗</span></button>)}</div><Pagination total={remote.total} page={page} pageSize={pageSize} itemLabel="tác vụ" onPageChange={setPage} onPageSizeChange={size => { setPageSize(size); setPage(1); }} /></> : <div className="no-results">Không có job phù hợp. <button onClick={() => go('/scan')}>Xem kết quả quét toàn sàn ↗</button></div>}</section></div>;
 }
