@@ -59,16 +59,33 @@ Trang `/admin` dùng `QUANTIK_ADMIN_KEY` trong `.env`. Nhập khóa vào form đ
 
 Nếu API hoặc frontend đã chạy ở cổng 8000/5173, dùng tiến trình hiện có; không mở thêm một bản cùng cổng.
 
-## Chạy trọn hệ thống bằng Docker Compose
+## Chạy Demo nhanh cho cuộc họp qua Ngrok (Windows 1-Click)
 
-Chuẩn bị `.env` như trên, sau đó chạy tại thư mục gốc:
+Dự án đã tích hợp kịch bản đóng gói tự động cho máy Windows để chia sẻ link demo cho các bên tham gia họp qua Google Meet/Zoom:
 
-```bat
+1. **Chuẩn bị (chỉ làm lần đầu):** Lấy auth token miễn phí tại [ngrok.com](https://dashboard.ngrok.com/get-started/your-authtoken).
+2. **Khởi chạy (1-Click):** Nháy đúp file `run-ngrok-demo.bat` tại thư mục gốc. Script sẽ tự kiểm tra môi trường, khởi động Backend (port 8000), Quant Worker (xử lý job nền), Frontend (port 5173), và thiết lập đường hầm Ngrok với rewrite host.
+3. **Chia sẻ:** Copy đường link `https://*.ngrok-free.app` hiển thị trên màn hình để gửi cho đối tác/khách hàng.
+4. **Dừng demo:** Nhấn `Ctrl + C` trên cửa sổ Ngrok, sau đó nháy đúp file `stop-demo.bat` để tắt toàn bộ tiến trình ngầm sạch sẽ.
+
+## Đóng gói và Triển khai trọn hệ thống bằng Docker Compose (VPS / Server)
+
+Dự án hỗ trợ đóng gói chuẩn Docker Compose gồm 4 container tách biệt: `web` (Nginx + React build), `api` (FastAPI), `worker` (xử lý mô hình định lượng), `scheduler` (quét toàn sàn theo lịch).
+
+Chuẩn bị `.env` từ `.env-template`, cấu hình các biến môi trường quan trọng:
+- `QUANTIK_BIND_IP=127.0.0.1` (nếu đặt sau Host Reverse Proxy) hoặc `0.0.0.0`
+- `QUANTIK_WEB_PORT=8080`
+- `QUANTIK_GENERATE_IMAGES=false` (mặc định tắt sinh ảnh tĩnh Matplotlib để tăng tốc và tiết kiệm tài nguyên; FE vẽ chart động)
+- `QUANTIK_ALLOWED_ORIGINS` (tùy chọn domain công khai)
+
+Khởi động hệ thống:
+
+```bash
 docker compose up -d --build
 docker compose ps
 ```
 
-Mở `http://localhost:8080` (đổi bằng `QUANTIK_WEB_PORT` trong môi trường host). Compose chạy riêng `web`, `api`, `worker`, `scheduler`; SQLite, checkpoint và biểu đồ nằm trong volume `quantik-data`. Nginx phục vụ React và chuyển tiếp `/api`, gồm cả SSE. Xem log bằng `docker compose logs -f api worker scheduler`; dừng bằng `docker compose down`. Không thêm `-v` khi dừng nếu muốn giữ database và checkpoint.
+Nếu chạy trên máy chủ VPS có domain và chứng chỉ SSL (Let's Encrypt / Certbot), tham khảo mẫu cấu hình Nginx Reverse Proxy tại [`deploy/host-nginx.conf.example`](deploy/host-nginx.conf.example) để chuyển tiếp chuẩn HTTPS, WebSocket/SSE và bảo mật header.
 
 Backup nóng database cùng kho biểu đồ, kiểm tra checksum, và thử restore vào thư mục cô lập:
 
