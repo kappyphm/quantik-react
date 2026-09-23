@@ -18,7 +18,8 @@ from runtime_env import load_project_env
 load_project_env()
 from engine import quant_from_snapshot, scan_all
 from backtest_service import recommendation_backtest
-from store import claim_job, connect, dumps, heartbeat_job, init_db, loads, now, update_job
+from store import (claim_job, connect, dumps, heartbeat_job, heartbeat_service,
+                   init_db, loads, now, update_job)
 
 log = logging.getLogger("quantik.worker")
 ARTIFACT_ROOT = Path(os.getenv("QUANTIK_ARTIFACT_ROOT", Path(__file__).resolve().parent / "data" / "artifacts"))
@@ -185,6 +186,7 @@ def process_one():
     job = claim_job()
     if not job:
         return False
+    heartbeat_service("worker", "busy", {"job_id": job["id"], "kind": job["kind"]})
     log.info("Running %s job %s", job["kind"], job["id"])
     stop_heartbeat = threading.Event()
 
@@ -192,6 +194,7 @@ def process_one():
         while not stop_heartbeat.wait(20):
             try:
                 heartbeat_job(job["id"])
+                heartbeat_service("worker", "busy", {"job_id": job["id"], "kind": job["kind"]})
             except Exception:
                 log.exception("Heartbeat failed for job %s", job["id"])
 
@@ -209,6 +212,7 @@ def process_one():
     finally:
         stop_heartbeat.set()
         heartbeat_thread.join(timeout=2)
+        heartbeat_service("worker", "ready")
     return True
 
 
@@ -218,7 +222,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     init_db()
+    last_service_heartbeat = 0.0
     while True:
+        monotonic = time.monotonic()
+        if monotonic - last_service_heartbeat >= 10:
+            heartbeat_service("worker", "ready")
+            last_service_heartbeat = monotonic
         worked = process_one()
         if args.once:
             break

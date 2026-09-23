@@ -16,7 +16,8 @@ from fastapi.testclient import TestClient
 import server
 import worker
 from server import app
-from store import connect, create_scan, dumps, init_db, new_job, now, update_job
+from store import (connect, create_scan, dumps, heartbeat_service, init_db, new_job,
+                   now, update_job)
 from worker import process_one, run_scan
 from backtest_service import recommendation_backtest
 
@@ -131,6 +132,12 @@ class ApiQueueTest(unittest.TestCase):
         with TestClient(app) as client:
             self.assertEqual(client.get('/api/v1/admin/session').status_code, 403)
             self.assertEqual(client.get('/api/v1/admin/session', headers=headers).status_code, 200)
+            heartbeat_service('worker', 'ready')
+            heartbeat_service('scheduler', 'ready', {'pre_open': '07:00'})
+            system = client.get('/api/v1/admin/system', headers=headers).json()
+            self.assertEqual({item['name'] for item in system['services']}, {'api', 'worker', 'scheduler'})
+            self.assertFalse(any(item['stale'] for item in system['services']))
+            self.assertEqual(system['schedule']['timezone'], 'Asia/Ho_Chi_Minh')
             body = {'slot': 'MANUAL', 'trading_date': '2026-09-20'}
             created = client.post('/api/v1/admin/scan-runs', json=body, headers=headers)
             self.assertEqual(created.status_code, 202)

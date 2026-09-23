@@ -85,6 +85,7 @@ def present_report(report: dict, prices) -> dict:
         'score': report.get('rec', {}).get('score'),
         'rating': report.get('rec', {}).get('rating'),
         'action': report.get('action', {}).get('action'),
+        'commentary': report.get('commentary') or '',
         'dist': report.get('dist', {}),
         'stats': report.get('stats', {}),
         'vol': report.get('vol', {}),

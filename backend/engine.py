@@ -282,18 +282,24 @@ def _quant_with_frames(symbol, frame, index, exchange, progress, output_dir: Pat
     from quant_engine.quant_visuals import generate_quant_visuals
 
     progress("models", 35, "Đang chạy các mô hình định lượng")
-    report = QuantPipeline().batch({symbol: frame}, idx_df=index, exchange_map={symbol: exchange})[0]
+    pipeline = QuantPipeline()
+    report = pipeline.batch({symbol: frame}, idx_df=index, exchange_map={symbol: exchange})[0]
     if report.get("error"):
         raise RuntimeError(report["error"])
     progress("risk", 75, "Đang tổng hợp rủi ro và báo cáo")
+    commentary_text = pipeline.generate_commentary(report)
     presentation = present_report(report, frame)
+    presentation["commentary"] = commentary_text
     presentation["score_comparable"] = False  # Batch một mã không có phân phối toàn sàn.
     presentation["score_comparability_reason"] = "Job một mã không chạy lại phân phối cross-sectional toàn sàn."
     presentation["include_backtest"] = include_backtest
     presentation["data_source_mode"] = source_mode
-    progress("visual", 89, "Đang tạo biểu đồ QUANT")
-    visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
-                                     report=report, price_data=frame)
+    if os.getenv("QUANTIK_GENERATE_IMAGES", "false").lower() == "true":
+        progress("visual", 89, "Đang tạo biểu đồ QUANT")
+        visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
+                                         report=report, price_data=frame)
+    else:
+        visuals = {"generated": [], "skipped": {}}
     return presentation, visuals, bars_from_frame(frame)
 
 

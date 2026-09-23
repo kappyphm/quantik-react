@@ -19,7 +19,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from runtime_env import load_project_env
-from store import connect, create_scan, init_db, loads, new_job, new_session, session_exists, now
+from store import (connect, create_scan, heartbeat_service, init_db, loads, new_job,
+                   new_session, session_exists, now)
 from market import overview as live_market_overview
 
 load_project_env()
@@ -402,7 +403,18 @@ def get_report(report_id: str, request: Request):
         row = owned_job(db, report_id, owner_or_401(request))
     if row["status"] != "succeeded":
         raise HTTPException(404, "Báo cáo chưa sẵn sàng")
-    return loads(row["report_json"], {})
+    report = loads(row["report_json"], {})
+    if not report.get("commentary"):
+        with connect() as db:
+            run_id = report.get("reference_run_id")
+            if run_id:
+                scan_row = db.execute("SELECT detail_json FROM scan_results WHERE run_id=? AND symbol=?",
+                                      (run_id, row["symbol"])).fetchone()
+                if scan_row:
+                    detail = loads(scan_row["detail_json"], {})
+                    if detail.get("commentary"):
+                        report["commentary"] = detail["commentary"]
+    return report
 
 
 @app.get("/api/v1/quant/reports/{report_id}/artifacts/{artifact_id}")
@@ -436,6 +448,35 @@ def audit_admin(action: str, target_id: str, actor: str):
 def admin_session(x_admin_key: str | None = Header(default=None)):
     admin_or_403(x_admin_key)
     return {"ready": True}
+
+
+@app.get("/api/v1/admin/system")
+def admin_system(x_admin_key: str | None = Header(default=None)):
+    admin_or_403(x_admin_key)
+    thresholds = {"worker": 45, "scheduler": 90}
+    current = datetime.now(ZoneInfo("UTC"))
+    with connect() as db:
+        rows = {row["name"]: row for row in db.execute("SELECT * FROM runtime_services").fetchall()}
+        queue = {row["status"]: row["count"] for row in db.execute(
+            "SELECT status,COUNT(*) AS count FROM jobs GROUP BY status").fetchall()}
+        latest = db.execute("""SELECT r.id,r.data_as_of,r.published_at,r.source_version,r.model_version
+                               FROM publication p JOIN scan_runs r ON r.id=p.run_id
+                               WHERE p.key='latest'""").fetchone()
+    services = [{"name": "api", "status": "ready", "heartbeat_at": now(),
+                 "age_seconds": 0, "stale": False, "detail": {"storage": "sqlite"}}]
+    for name, threshold in thresholds.items():
+        row = rows.get(name)
+        heartbeat_at = row["heartbeat_at"] if row else None
+        age = max(0, int((current - datetime.fromisoformat(heartbeat_at)).total_seconds())) if heartbeat_at else None
+        services.append({"name": name, "status": row["status"] if row else "missing",
+                         "heartbeat_at": heartbeat_at, "age_seconds": age,
+                         "stale": age is None or age > threshold,
+                         "detail": loads(row["detail_json"], {}) if row else {}})
+    return {"services": services, "queue": queue,
+            "schedule": {"timezone": "Asia/Ho_Chi_Minh",
+                         "pre_open": os.getenv("QUANTIK_PRE_OPEN_TIME", "07:00"),
+                         "post_close": os.getenv("QUANTIK_POST_CLOSE_TIME", "16:20")},
+            "latest_publication": dict(latest) if latest else None}
 
 
 @app.post("/api/v1/admin/scan-runs", status_code=202)
@@ -593,8 +634,19 @@ def admin_delete_calendar(trading_date: str, x_admin_key: str | None = Header(de
 def admin_quant_report(job_id: str, x_admin_key: str | None = Header(default=None)):
     admin_or_403(x_admin_key)
     with connect() as db:
-        row = db.execute("SELECT report_json FROM jobs WHERE id=? AND kind='quant' AND status='succeeded'",
+        row = db.execute("SELECT report_json,symbol FROM jobs WHERE id=? AND kind='quant' AND status='succeeded'",
                          (job_id,)).fetchone()
     if not row:
         raise HTTPException(404, "Không tìm thấy báo cáo")
-    return loads(row["report_json"], {})
+    report = loads(row["report_json"], {})
+    if not report.get("commentary"):
+        with connect() as db:
+            run_id = report.get("reference_run_id")
+            if run_id:
+                scan_row = db.execute("SELECT detail_json FROM scan_results WHERE run_id=? AND symbol=?",
+                                      (run_id, row["symbol"])).fetchone()
+                if scan_row:
+                    detail = loads(scan_row["detail_json"], {})
+                    if detail.get("commentary"):
+                        report["commentary"] = detail["commentary"]
+    return report

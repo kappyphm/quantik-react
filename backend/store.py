@@ -111,6 +111,10 @@ def init_db():
           trading_date TEXT PRIMARY KEY, is_trading_day INTEGER NOT NULL,
           reason TEXT NOT NULL, actor TEXT NOT NULL, updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS runtime_services (
+          name TEXT PRIMARY KEY, status TEXT NOT NULL,
+          heartbeat_at TEXT NOT NULL, detail_json TEXT NOT NULL
+        );
         """)
         columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
         if "heartbeat_at" not in columns:
@@ -142,6 +146,18 @@ def session_exists(sid: str | None) -> bool:
         return False
     with connect() as db:
         return db.execute("SELECT 1 FROM sessions WHERE id=?", (sid,)).fetchone() is not None
+
+
+def heartbeat_service(name: str, status: str, detail: dict | None = None):
+    """Persist a compact health signal for independently running services."""
+    if name not in {"worker", "scheduler"}:
+        raise ValueError("Dịch vụ heartbeat không hợp lệ")
+    with connect(write=True) as db:
+        db.execute("""INSERT INTO runtime_services(name,status,heartbeat_at,detail_json)
+                      VALUES (?,?,?,?) ON CONFLICT(name) DO UPDATE SET
+                      status=excluded.status,heartbeat_at=excluded.heartbeat_at,
+                      detail_json=excluded.detail_json""",
+                   (name, status[:40], now(), dumps(detail or {})))
 
 
 def new_job(kind: str, owner: str | None, symbol: str | None, params: dict,

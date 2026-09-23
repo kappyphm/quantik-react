@@ -41,7 +41,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "${QUANTIK_WEB_PORT:-8080}:80"
+      - "${QUANTIK_BIND_IP:-0.0.0.0}:${QUANTIK_WEB_PORT:-8080}:80"
     restart: unless-stopped
 
 volumes:

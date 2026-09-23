@@ -14,7 +14,8 @@ import scheduler
 class SchedulerTest(unittest.TestCase):
     def test_enqueues_both_daily_slots_and_skips_existing_run(self):
         zone = ZoneInfo('Asia/Ho_Chi_Minh')
-        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create:
+        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create, \
+             patch.object(scheduler, 'heartbeat_service') as heartbeat:
             connect.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = None
             create.side_effect = [
                 {'run_id': 'pre-open-test'},
@@ -38,10 +39,12 @@ class SchedulerTest(unittest.TestCase):
                                          'QUANTIK_HOLIDAYS': ''}):
                 scheduler.tick(datetime(2026, 9, 22, 16, 22, tzinfo=zone))
             create.assert_not_called()
+            self.assertGreaterEqual(heartbeat.call_count, 3)
 
     def test_due_slot_only_and_holiday(self):
         zone = ZoneInfo('Asia/Ho_Chi_Minh')
-        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create:
+        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create, \
+             patch.object(scheduler, 'heartbeat_service'):
             connect.return_value.__enter__.return_value.execute.return_value.fetchone.return_value = None
             create.return_value = {'run_id': 'scheduled-test'}
             with patch.dict(os.environ, {'QUANTIK_PRE_OPEN_TIME': '07:00',
@@ -58,7 +61,8 @@ class SchedulerTest(unittest.TestCase):
 
     def test_database_override_can_open_a_weekend(self):
         zone = ZoneInfo('Asia/Ho_Chi_Minh')
-        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create:
+        with patch.object(scheduler, 'connect') as connect, patch.object(scheduler, 'create_scan') as create, \
+             patch.object(scheduler, 'heartbeat_service'):
             connect.return_value.__enter__.return_value.execute.return_value.fetchone.side_effect = [
                 {'is_trading_day': 1}, None,
             ]

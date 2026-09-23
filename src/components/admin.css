@@ -9,6 +9,7 @@
 .admin-toolbar>button,.admin-table button{background:var(--raised);border:1px solid var(--line);color:var(--amber);padding:8px 10px;white-space:nowrap}
 .admin-table td button+button{margin-left:6px}
 .diagnostic-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}.diagnostic-toolbar label{display:grid;gap:7px;color:var(--muted);font-size:12px}.diagnostic-toolbar select{min-width:190px;background:var(--raised);border:1px solid var(--line);color:var(--text);padding:9px}.diagnostic-toolbar span{color:var(--faint);font:11px 'IBM Plex Mono'}
+.service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.service-grid>div{display:grid;gap:6px;padding:14px;border:1px solid var(--line);background:var(--raised)}.service-grid span,.service-grid small,.queue-summary{color:var(--faint);font:10px 'IBM Plex Mono'}.service-grid strong{color:var(--green)}.service-grid .stale{border-color:#6e443d}.service-grid .stale strong{color:var(--red)}.queue-summary{display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 0}.queue-summary b{color:var(--text);font-weight:500}.queue-summary span:not(:first-child){margin-left:auto}
 .admin-table-wrap{overflow:auto}
 .admin-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
 .admin-table th,.admin-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -20,4 +21,4 @@
 .admin-audit>div{display:flex;gap:18px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--line);font:11px 'IBM Plex Mono';color:var(--muted)}
 .admin-audit b{color:var(--amber)}
 .admin-message{position:sticky;bottom:10px;background:#35231e;border:1px solid var(--red);padding:12px;color:var(--red)}
-@media(max-width:720px){.admin-toolbar{display:block}.admin-toolbar>button{margin-top:12px}.calendar-form{grid-template-columns:1fr}.site-header nav button{font-size:10px}}
+@media(max-width:720px){.admin-toolbar{display:block}.admin-toolbar>button{margin-top:12px}.calendar-form,.service-grid{grid-template-columns:1fr}.queue-summary span:not(:first-child){margin-left:0}.site-header nav button{font-size:10px}}
