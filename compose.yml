@@ -1,0 +1,48 @@
+name: quantik
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  env_file:
+    - .env
+  environment:
+    QUANTIK_DB_PATH: /app/backend/data/quantik.sqlite
+    QUANTIK_ARTIFACT_ROOT: /app/backend/data/artifacts
+  volumes:
+    - quantik-data:/app/backend/data
+  restart: unless-stopped
+  init: true
+
+services:
+  api:
+    <<: *backend
+    command: ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    <<: *backend
+    command: ["python", "-u", "worker.py"]
+
+  scheduler:
+    <<: *backend
+    command: ["python", "-u", "scheduler.py"]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${QUANTIK_BIND_IP:-0.0.0.0}:${QUANTIK_WEB_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  quantik-data:

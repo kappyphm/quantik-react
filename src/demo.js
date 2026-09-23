@@ -1,4 +1,0 @@
-const stocks = [
- ['FPT','Công nghệ FPT',132.5,134.8,89],['HPG','Tập đoàn Hòa Phát',27.2,27.85,82],['VCB','Vietcombank',91.5,92.1,76],['MWG','Đầu tư Thế Giới Di Động',62.8,64.2,85],['MBB','Ngân hàng Quân đội',24.1,24.55,78],['TCB','Techcombank',23.6,23.4,68],['SSI','Chứng khoán SSI',32.1,32.75,81],['VHM','Vinhomes',43.5,42.9,54],['VNM','Vinamilk',67.8,67.8,62],['ACB','Ngân hàng Á Châu',25.1,25.45,74],['GAS','PV GAS',78.2,77.6,58],['MSN','Tập đoàn Masan',74.5,75.8,73],['VPB','VPBank',19.2,19.05,61],['VIC','Vingroup',42.3,42.8,65],['HHP','HHP Global',11.2,11.45,70]
-];
-export const demoRows = stocks.map(([sym,name,ref,price,score],i) => ({sym,name,ref,price,score,ceil:ref*1.07,floor:ref*.93,vol:Math.round((1.3+i*.43)*1000000),spark:Array.from({length:30},(_,j)=>ref+(price-ref)*j/29+Math.sin(j*1.7+i)*ref*.004)}));

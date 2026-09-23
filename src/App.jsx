@@ -1,35 +1,68 @@
-import { useEffect, useRef, useState } from 'react';
-import PriceBoard from './components/PriceBoard.jsx';
-import StockModal from './components/StockModal.jsx';
+import { useEffect, useState } from 'react';
+import Home from './components/Home.jsx';
+import Scan from './components/Scan.jsx';
+import Detail from './components/Detail.jsx';
+import { JobDetail, Reports } from './components/Jobs.jsx';
+import Admin from './components/Admin.jsx';
 
-export default function App() {
-  const [open, setOpen] = useState(null);
-  const [section, setSection] = useState('market');
-  const [command, setCommand] = useState('');
-  const [notice, setNotice] = useState('Nhập mã + Enter để mở biểu đồ · VD: FPT hoặc FPT Q');
-  const [clock, setClock] = useState(new Date());
-  const input = useRef(null);
+function usePath() {
+  const [path, setPath] = useState(window.location.pathname);
   useEffect(() => {
-    document.documentElement.dataset.theme = 'dark';
-    const timer = setInterval(() => setClock(new Date()),1000);
-    const key = e => { if(e.key === '/' && !['INPUT','TEXTAREA'].includes(e.target.tagName)) {e.preventDefault();input.current?.focus();} };
-    document.addEventListener('keydown',key);
-    return () => {clearInterval(timer);document.removeEventListener('keydown',key);};
-  },[]);
-  const execute = e => {
-    e.preventDefault();
-    const text = command.trim().toUpperCase();
-    if(text === 'WATCH' || text === 'MARKET') {setSection(text === 'WATCH' ? 'watch' : 'market');setCommand('');return;}
-    const match = text.match(/^([A-Z]{3})(?:\s+(Q|CHART))?$/);
-    if(match) {setOpen({sym:match[1],tab:match[2] === 'Q' ? 'quant' : 'chart'});setCommand('');}
-    else setNotice('Lệnh: FPT · FPT Q · FPT CHART · WATCH · MARKET');
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const go = next => {
+    if (next !== window.location.pathname) window.history.pushState({}, '', next);
+    setPath(next);
+    window.scrollTo(0, 0);
   };
-  return <div className="terminal">
-    <header className="terminal-header"><b className="wordmark">QUANTIK<span> TERMINAL</span></b><span className="header-market">VIETNAM / EQUITIES</span><span className="header-right">DEMO DATA <time>{clock.toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})} ICT</time></span></header>
-    <nav className="function-bar" aria-label="Điều hướng"><button className={section === 'market' ? 'active' : ''} onClick={()=>setSection('market')}><b>01</b> BẢNG GIÁ</button><button className={section === 'watch' ? 'active' : ''} onClick={()=>setSection('watch')}><b>02</b> THEO DÕI</button><span>VN EQUITY MONITOR</span><span className="nav-end">LOCAL SESSION</span></nav>
-    <form className="command-line" onSubmit={execute}><label htmlFor="command">COMMAND &gt;</label><input ref={input} id="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="FPT Q" autoComplete="off" spellCheck="false"/><button type="submit">GO ↵</button><span role="status">{notice}</span></form>
-    <main><PriceBoard section={section} onOpen={sym=>setOpen({sym,tab:'chart'})} onQuant={sym=>setOpen({sym,tab:'quant'})}/></main>
-    <footer className="terminal-footer"><span><b>QT</b> DỮ LIỆU MÔ PHỎNG / KHÔNG PHẢI GIÁ TRỰC TIẾP</span><span>[/] LỆNH &nbsp; [ENTER] CHI TIẾT &nbsp; [ESC] ĐÓNG</span></footer>
-    {open && <StockModal sym={open.sym} initialTab={open.tab} theme="dark" onClose={()=>setOpen(null)}/>}
-  </div>;
+  return [path, go];
+}
+
+const toJob = row => ({ ...row, createdAt: Date.parse(row.requested_at), id: row.job_id || row.id });
+export default function App() {
+  const [path, go] = usePath();
+  const [jobs, setJobs] = useState([]);
+  const [apiReady, setApiReady] = useState(false);
+  const [connection, setConnection] = useState('loading');
+  const [apiError, setApiError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/v1/session', { method: 'POST', credentials: 'same-origin' })
+      .then(response => { if (!response.ok) throw new Error('API chưa sẵn sàng'); return fetch('/api/v1/quant/jobs', { credentials: 'same-origin' }); })
+      .then(response => { if (!response.ok) throw new Error('Không mở được phiên API'); return response.json(); })
+      .then(data => { if (active) { setApiReady(true); setConnection('api'); setJobs((data.items || []).map(toJob)); } })
+      .catch(() => { if (active) setConnection('offline'); });
+    return () => { active = false; };
+  }, []);
+
+  const startJob = async symbol => {
+    try {
+      setApiError('');
+      const response = await fetch('/api/v1/quant/jobs', {
+        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, include_backtest: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail?.message || data.detail || 'Không tạo được job');
+      setJobs(old => [{ id: data.job_id, symbol, createdAt: Date.now(), status: 'queued' }, ...old]);
+      go(`/quant/jobs/${data.job_id}`);
+    } catch (error) {
+      setApiError(error.message);
+    }
+  };
+
+  const route = connection === 'loading' ? <div className="page not-found"><h1>Đang kết nối API…</h1></div>
+    : connection === 'offline' ? <div className="page not-found"><h1>Không kết nối được backend.</h1><p>Khởi động API tại cổng 8000 rồi tải lại trang.</p><button className="primary" onClick={() => window.location.reload()}>THỬ LẠI ↗</button></div>
+    : path === '/' ? <Home go={go} apiReady={apiReady} />
+    : path === '/scan' ? <Scan go={go} apiReady={apiReady} />
+    : path.startsWith('/stocks/') ? <Detail symbol={decodeURIComponent(path.split('/')[2]).toUpperCase()} go={go} startJob={startJob} jobs={jobs} apiReady={apiReady} />
+    : path.startsWith('/quant/jobs/') ? <JobDetail id={path.split('/')[3]} jobs={jobs} go={go} apiReady={apiReady} startJob={startJob} />
+    : path === '/quant/reports' ? <Reports jobs={jobs} go={go} apiReady={apiReady} />
+    : path === '/admin' ? <Admin />
+    : <div className="page not-found"><h1>Không có dữ liệu cho đường dẫn này.</h1><button className="primary" onClick={() => go('/scan')}>VỀ KẾT QUẢ QUÉT ↗</button></div>;
+
+  return <div className="app-shell"><header className="site-header"><button className="brand" onClick={() => go('/')} aria-label="QuanTik — trang chủ"><span className="brand-mark">Q<span>↗</span></span><span>QUANTIK<small>MARKET INTELLIGENCE</small></span></button><nav aria-label="Điều hướng chính"><button className={path === '/' ? 'selected' : ''} onClick={() => go('/')}>Tổng quan</button><button className={path === '/scan' ? 'selected' : ''} onClick={() => go('/scan')}>Quét toàn sàn</button><button className={path.startsWith('/quant/') ? 'selected' : ''} onClick={() => go('/quant/reports')}>Báo cáo của tôi {jobs.length > 0 && <i>{jobs.length}</i>}</button><button className={path === '/admin' ? 'selected' : ''} onClick={() => go('/admin')}>Quản trị</button></nav><span className="header-demo"><span className="live-dot" /> {connection === 'api' ? 'API · KẾT NỐI' : connection === 'loading' ? 'ĐANG KẾT NỐI' : 'API OFFLINE'}</span></header>{apiError && <div className="api-error" role="alert">{apiError} <button onClick={() => setApiError('')}>×</button></div>}<main>{route}</main><footer className="site-footer"><span>© 2026 QUANTIK</span><span>Dữ liệu theo nguồn và thời điểm hiển thị · không phải khuyến nghị đầu tư</span><span>VIETNAM / EQUITIES</span></footer></div>;
 }

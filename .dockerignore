@@ -1,0 +1,11 @@
+.git
+.env
+.venv
+backend/.venv
+backend/data
+backend/out
+node_modules
+dist
+quant-core
+*.log
+__pycache__
