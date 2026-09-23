@@ -160,7 +160,8 @@ def scan_status():
 
 def query_results(run_id: str, q: str, exchange: str | None, recommendation: str | None,
                   gate_pass: bool | None, sector: str | None, score_min: float | None,
-                  score_max: float | None, sort: str, order: str, page: int, page_size: int):
+                  score_max: float | None, sort: str, order: str, page: int, page_size: int,
+                  analysis_status: str | None = None):
     with connect() as db:
         raw = db.execute("SELECT summary_json FROM scan_results WHERE run_id=?", (run_id,)).fetchall()
     items = [loads(row["summary_json"], {}) for row in raw]
@@ -171,6 +172,7 @@ def query_results(run_id: str, q: str, exchange: str | None, recommendation: str
              (not recommendation or item.get("recommendation") == recommendation) and
              (gate_pass is None or item.get("gate_pass") == gate_pass) and
              (not sector or item.get("sector") == sector) and
+             (not analysis_status or item.get("analysis_status") == analysis_status) and
              (score_min is None or (item.get("score") is not None and item["score"] >= score_min)) and
              (score_max is None or (item.get("score") is not None and item["score"] <= score_max))]
     sort = sort if sort in SORT_FIELDS else "score"
@@ -479,17 +481,21 @@ def admin_run_results(run_id: str, x_admin_key: str | None = Header(default=None
                       q: str = "", exchange: str | None = None, recommendation: str | None = None,
                       gate_pass: bool | None = None, sector: str | None = None,
                       score_min: float | None = None, score_max: float | None = None,
-                      sort: str = "score", order: str = "desc", page: int = 1, page_size: int = 10):
+                      analysis_status: str | None = None, sort: str = "score", order: str = "desc",
+                      page: int = 1, page_size: int = 10):
     admin_or_403(x_admin_key)
     if page < 1 or not 1 <= page_size <= 100:
         raise HTTPException(422, "page/page_size không hợp lệ")
+    allowed_statuses = {"completed", "screened_out", "insufficient_data", "failed"}
+    if analysis_status and analysis_status not in allowed_statuses:
+        raise HTTPException(422, "analysis_status không hợp lệ")
     with connect() as db:
         run = db.execute("SELECT id,data_as_of,model_version,source_version FROM scan_runs WHERE id=?", (run_id,)).fetchone()
     if not run:
         raise HTTPException(404, "Không tìm thấy bản quét")
     return {**run_metadata(run),
             **query_results(run_id, q, exchange, recommendation, gate_pass, sector,
-                            score_min, score_max, sort, order, page, page_size)}
+                            score_min, score_max, sort, order, page, page_size, analysis_status)}
 
 
 @app.get("/api/v1/admin/scan-runs/{run_id}/results/{symbol}")

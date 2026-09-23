@@ -78,6 +78,9 @@ class ApiQueueTest(unittest.TestCase):
             os.environ['QUANTIK_ADMIN_KEY'] = 'test-admin-only'
             headers = {'X-Admin-Key': 'test-admin-only'}
             self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results', headers=headers).json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results?analysis_status=completed', headers=headers).json()['total'], 1)
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results?analysis_status=failed', headers=headers).json()['total'], 0)
+            self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results?analysis_status=unknown', headers=headers).status_code, 422)
             self.assertEqual(client.get('/api/v1/admin/scan-runs/FIXTURE-TEST/results/FPT', headers=headers).json()['symbol'], 'FPT')
             self.assertEqual(client.get(f"/api/v1/admin/quant/reports/{created['job_id']}", headers=headers).json()['analysis_mode'], 'quant_core')
             with client.stream('GET', f"/api/v1/quant/jobs/{created['job_id']}/events") as response:
