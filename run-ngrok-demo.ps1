@@ -61,6 +61,16 @@ if (-not $backendRunning) {
     Write-Host "[+] Backend FastAPI đang chạy sẵn sàng tại cổng 8000." -ForegroundColor Green
 }
 
+# 3b. Kiểm tra Quant Worker (xử lý job nền)
+$workerRunning = Get-CimInstance Win32_Process -Filter "Name LIKE 'python%' AND CommandLine LIKE '%worker.py%'" -ErrorAction SilentlyContinue
+if (-not $workerRunning) {
+    Write-Host "[*] Đang khởi động Quant Worker..." -ForegroundColor Cyan
+    Start-Process -FilePath "$PSScriptRoot\backend\.venv\Scripts\python.exe" -ArgumentList "worker.py" -WorkingDirectory "$PSScriptRoot\backend" -WindowStyle Minimized
+    Start-Sleep -Seconds 1
+} else {
+    Write-Host "[+] Quant Worker đang chạy sẵn sàng." -ForegroundColor Green
+}
+
 # 4. Kiểm tra Frontend (Port 5173)
 $frontendRunning = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
 if (-not $frontendRunning) {
@@ -73,8 +83,9 @@ if (-not $frontendRunning) {
 
 Write-Host ""
 Write-Host "[*] Đang khởi tạo đường hầm Ngrok trỏ tới http://localhost:5173..." -ForegroundColor Cyan
-Write-Host "    (Nhấn Ctrl + C trong cửa sổ Ngrok để đóng đường hầm khi kết thúc cuộc họp)" -ForegroundColor Gray
+Write-Host "    (Link HTTPS công khai sẽ hiển thị bên dưới. Copy link gửi vào Google Meet!)" -ForegroundColor Yellow
+Write-Host "    (Nhấn Ctrl + C để dừng đường hầm khi kết thúc buổi họp)" -ForegroundColor Gray
 Write-Host ""
 
-# 5. Khởi chạy Ngrok
-& $ngrokPath http 5173
+# 5. Khởi chạy Ngrok (Host-header rewrite để tương thích mọi phiên bản Vite)
+& $ngrokPath http 5173 --host-header=rewrite

@@ -25,9 +25,17 @@ from market import overview as live_market_overview
 
 load_project_env()
 log = logging.getLogger("quantik.api")
+_origins_env = os.getenv("QUANTIK_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
 app = FastAPI(title="QuanTik API", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"],
-                   allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"^https?://.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 SYMBOL_RE = re.compile(r"^[A-Z]{3,5}$")
 SORT_FIELDS = {"symbol", "recommendation", "gate_pass", "gate_explanation", "score", "rating",
                "hold_plan", "vni_trend", "sector", "sector_trend", "exchange"}
