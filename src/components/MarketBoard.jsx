@@ -3,6 +3,7 @@ import { AreaSeries, createChart } from 'lightweight-charts';
 import Pagination from './Pagination.jsx';
 
 const fmt = (value, digits = 2) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('vi-VN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const stamp = value => value ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—';
 const change = bars => {
   const current = bars.at(-1).close;
   const previous = bars.at(-2).close;
@@ -66,8 +67,8 @@ export default function MarketBoard() {
   const advances = remote?.breadth?.advances;
   const declines = remote?.breadth?.declines;
   return <section className="market-board" aria-label="Bảng điện thị trường">
-    <div className="market-board-head"><div><span className="market-board-kicker">THỊ TRƯỜNG VIỆT NAM / TỔNG QUAN</span><strong>Bảng điện</strong></div><span className="market-demo-tag">{`${remote?.source === 'vnstock_price_board' ? 'VNSTOCK · BẢNG GIÁ' : 'ĐANG TẢI'} · ${remote?.as_of || '—'}`}</span></div>
-    {error && <div className="market-api-empty" role="alert">{error}{remote ? ` · đang giữ snapshot nhận lúc ${remote.as_of}` : ''}</div>}
+    <div className="market-board-head"><div><span className="market-board-kicker">THỊ TRƯỜNG VIỆT NAM / TỔNG QUAN</span><strong>Bảng điện</strong></div><span className="market-demo-tag">{`${remote?.source === 'vnstock_price_board' ? 'VNSTOCK · BẢNG GIÁ' : 'ĐANG TẢI'} · ${stamp(remote?.as_of)}`}</span></div>
+    {error && <div className="market-api-empty" role="alert">{error}{remote ? ` · đang giữ snapshot nhận lúc ${stamp(remote.as_of)}` : ''}</div>}
     {remote ? <>
     {index ? <div className="market-index"><div className="market-index-stat"><span>VN-INDEX · EOD</span><strong>{fmt(index.current * scale)}</strong><b className={index.difference >= 0 ? 'positive' : 'negative'}>{index.difference >= 0 ? '+' : ''}{fmt(index.difference * scale)} ({index.percent >= 0 ? '+' : ''}{fmt(index.percent)}%)</b></div><IndexChart bars={indexBars} scale={scale} /></div> : <div className="market-api-empty">{remote ? 'Chưa có dữ liệu VN-Index từ Vnstock.' : 'Đang tải dữ liệu VN-Index…'}</div>}
     <div className="market-breadth">{advances != null && <span><i className="up-dot"/> Tăng <strong>{advances}</strong></span>}{declines != null && <span><i className="down-dot"/> Giảm <strong>{declines}</strong></span>}<span>{total} mã · HOSE / HNX / UPCoM</span></div>
