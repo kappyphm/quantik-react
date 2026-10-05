@@ -1,0 +1,30 @@
+import metrics from './metrics.json';
+const extras = [
+ ['monte_carlo','Monte Carlo','Mô phỏng Monte Carlo','Lặp nhiều lần lấy mẫu ngẫu nhiên để ước lượng phân phối hoặc kỳ vọng.',String.raw`\widehat{E}[f(X)]=\frac{1}{M}\sum_{m=1}^{M}f(X^{(m)})`,'M là số mẫu mô phỏng; mô hình sinh mẫu và giả định quyết định kết quả. Nhiều đường mô phỏng không tự sửa sai lệch mô hình.'],
+ ['quant_factor','Quant Factor','Nhân tố định lượng','Biến định lượng mô tả một đặc điểm của cổ phiếu, như động lượng, giá trị, chất lượng hoặc biến động.',String.raw`z_i=\frac{x_i-\mu_i}{\sigma_i}`,'Công thức minh họa việc chuẩn hóa một nhân tố. Định nghĩa, cửa sổ dữ liệu và cách tổng hợp phải khớp pipeline; một factor không đồng nghĩa với tín hiệu mua.'],
+ ['ref','Tham chiếu','Giá tham chiếu','Giá làm mốc so sánh trong phiên.',String.raw`\Delta P=P-P_{ref}`,'Theo quy tắc sàn và dữ liệu nhà cung cấp; không suy ra từ giá cuối trong mọi trường hợp.'],
+ ['ceil','Trần','Giá trần','Giới hạn giá phía trên của phiên.',String.raw`P\leq P_{ceil}`,'Lấy giá được nguồn cung cấp; làm tròn bước giá theo sàn.'],
+ ['floor','Sàn','Giá sàn','Giới hạn giá phía dưới của phiên.',String.raw`P\geq P_{floor}`,'Lấy giá được nguồn cung cấp; làm tròn bước giá theo sàn.'],
+ ['bid','Dư mua','Lệnh mua chờ','Giá và khối lượng các lệnh mua chưa khớp.',String.raw`P_{bid,1}\geq P_{bid,2}\geq P_{bid,3}`,'Khối lượng chờ không phải khối lượng đã giao dịch.'],
+ ['ask','Dư bán','Lệnh bán chờ','Giá và khối lượng các lệnh bán chưa khớp.',String.raw`P_{ask,1}\leq P_{ask,2}\leq P_{ask,3}`,'ATO/ATC cần loại quote riêng; không ép thành giá số.'],
+ ['matched','Khớp lệnh','Giá giao dịch gần nhất','Giá và khối lượng lần khớp gần nhất.',String.raw`\Delta\%=100(P/P_{ref}-1)`,'Phân biệt khối lượng lần khớp với tổng khối lượng tích lũy.'],
+ ['liquidity','Thanh khoản','Giá trị giao dịch','Tổng giá trị giao dịch trong phạm vi đang xét.',String.raw`GTGD=\sum_i P_iQ_i`,'Không tính bằng giá cuối nhân tổng khối lượng khi cần số thực.'],
+ ['sma','SMA','Trung bình động đơn giản','Trung bình giá trong n kỳ gần nhất.',String.raw`SMA_{n,t}=\frac1n\sum_{i=0}^{n-1}P_{t-i}`,'n là số nến, không luôn là ngày; chỉ báo có độ trễ.'],
+ ['ema','EMA','Trung bình động lũy thừa','Trung bình ưu tiên các giá gần đây.',String.raw`EMA_t=\alpha P_t+(1-\alpha)EMA_{t-1},\quad\alpha=\frac2{n+1}`,'Phương pháp khởi tạo ảnh hưởng giai đoạn đầu.'],
+ ['macd','MACD','Động lượng hội tụ/phân kỳ','Chênh lệch hai EMA giúp mô tả động lượng.',String.raw`MACD=EMA_{12}-EMA_{26}`,'Signal thường EMA 9 của MACD; tham số cần khớp phiên bản đang dùng.'],
+ ['atr','ATR','Biên độ thực trung bình','Đo mức dao động cùng đơn vị với giá.',String.raw`TR_t=\max(H_t-L_t,|H_t-C_{t-1}|,|L_t-C_{t-1}|)`,'ATR không dự báo chiều giá. Thường dùng smoothing Wilder với n=14.'],
+ ['garch','GARCH','Mô hình phương sai có điều kiện','Mô tả biến động phụ thuộc cú sốc và phương sai trước.',String.raw`\sigma_t^2=\omega+\alpha\epsilon_{t-1}^2+\beta\sigma_{t-1}^2`,'Công thức GARCH(1,1); mô hình thật có thể dùng cấu hình khác.'],
+ ['quant_score','Điểm Quant','Điểm tổng hợp','Điểm do quy tắc của hệ thống tổng hợp.',String.raw`Score=\sum_i w_is_i`,'Cần quy tắc score và trọng số thực. Không phải xác suất sinh lời.'],
+ ['beta','Beta','Độ nhạy với thị trường','Độ nhạy tuyến tính của lợi suất tài sản so với benchmark.',String.raw`\beta=\frac{\operatorname{Cov}(r_a,r_m)}{\operatorname{Var}(r_m)}`,'Cần cùng tần suất và giai đoạn; không đo mọi rủi ro của tài sản.'],
+ ['bollinger','Bollinger Bands','Dải Bollinger','Dải quanh trung bình động theo độ lệch chuẩn giá.',String.raw`Upper=SMA_n+k\sigma_n,\quad Lower=SMA_n-k\sigma_n`,'n và k tùy cấu hình; chạm dải không đảm bảo đảo chiều.'],
+ ['skewness','Skewness','Độ bất đối xứng','Mô tả sự bất đối xứng của phân phối.',String.raw`\gamma_3=\frac{E[(X-\mu)^3]}{\sigma^3}`,'Ước lượng mẫu có thể hiệu chỉnh bias; nhạy với dữ liệu bất thường.'],
+ ['psr','PSR','Probabilistic Sharpe Ratio','Đánh giá Sharpe so với ngưỡng dưới giả định thống kê.',String.raw`PSR=\Phi\!\left(\frac{(\widehat{SR}-SR^*)\sqrt{T-1}}{\sqrt{1-\gamma_3\widehat{SR}+\frac{\gamma_4-1}{4}\widehat{SR}^2}}\right)`,'Công thức tham khảo Bailey & López de Prado (2014): Sharpe theo kỳ chưa annualize; T số quan sát, γ3 skewness, γ4 Pearson kurtosis, Φ CDF chuẩn. Giả định cần kiểm tra; không phải xác suất có lãi.'],
+ ['dsr','DSR','Deflated Sharpe Ratio','Đánh giá Sharpe với ngưỡng điều chỉnh quá trình thử nhiều chiến lược.',String.raw`DSR=PSR(SR^*),\quad SR^*=E[\max_j\widehat{SR}_j]`,'Tham khảo Bailey & López de Prado (2014). Ngưỡng cần ước lượng từ số thử nghiệm hiệu dụng và phân phối Sharpe; không chỉ lấy số đường Monte Carlo làm số chiến lược đã thử.'],
+ ['entry','Entry','Điểm vào','Giá giả định để đánh giá một phương án giao dịch.',String.raw`P_{entry}`,'Chưa phản ánh khả năng khớp thực, phí hay trượt giá.'],
+ ['stop_loss','Stop loss','Ngưỡng dừng lỗ','Mức giá dừng lỗ giả định trong phương án.',String.raw`Risk=P_{entry}-P_{SL}`,'Minh họa vị thế mua; không đảm bảo khớp đúng giá dừng khi thị trường biến động.'],
+ ['take_profit','Take profit','Mục tiêu giá','Mức giá mục tiêu của phương án.',String.raw`Reward=P_{TP}-P_{entry}`,'Mục tiêu không phải giá dự báo chắc chắn.'],
+ ['sector_change','Thay đổi trung bình nhóm','Lợi suất ngành minh họa','Trung bình đều lợi suất các mã có dữ liệu hợp lệ.',String.raw`\bar r=\frac1N\sum_i(P_i/P_{ref,i}-1)`,'Không phải chỉ số ngành chính thức; phụ thuộc tập mã đang tải.'],
+];
+export const glossary = [...metrics, ...extras.map(([id,en,vi,short,formulaLatex,limitations])=>({id,en,vi,short,formulaLatex,limitations,usage:short,parameters:'Đối chiếu nguồn dữ liệu / tham số của mô hình.',variables:'Các biến theo công thức và trường dữ liệu đang hiển thị.',example:'Tài liệu giải thích; không phải kết quả phân tích cổ phiếu.',group:'Giá và chỉ báo',methodId:'reference-'+id,definitionStatus:'reference',references:['psr','dsr'].includes(id)?[{title:'Bailey & López de Prado (2014)',url:'https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf'}]:[]} ))];
+export const metricDefinitions = metrics;
+export const getTerm = id => glossary.find(t=>t.id===id);

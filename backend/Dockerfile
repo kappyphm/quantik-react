@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt ./requirements.txt
-RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+RUN python -m pip install --upgrade pip && python -m pip install --extra-index-url https://vnstocks.com/api/simple -r requirements.txt
 COPY backend/ ./
 
 EXPOSE 8000

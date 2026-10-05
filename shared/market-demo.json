@@ -1,0 +1,1997 @@
+{
+  "version": "demo-v2",
+  "source": "QuanTik fixture",
+  "mode": "demo",
+  "asOf": "2026-10-02T07:30:00Z",
+  "session": "Mẫu cố định",
+  "isStale": false,
+  "sequence": 1,
+  "units": {
+    "price": "VND",
+    "volume": "shares",
+    "value": "VND"
+  },
+  "classification": {
+    "source": "Danh mục minh họa QuanTik",
+    "asOf": "2026-10-04",
+    "mode": "demo"
+  },
+  "sectors": [
+    {
+      "id": "technology",
+      "name": "Công nghệ"
+    },
+    {
+      "id": "banks",
+      "name": "Ngân hàng"
+    },
+    {
+      "id": "materials",
+      "name": "Vật liệu"
+    },
+    {
+      "id": "retail",
+      "name": "Bán lẻ"
+    },
+    {
+      "id": "securities",
+      "name": "Chứng khoán"
+    },
+    {
+      "id": "real-estate",
+      "name": "Bất động sản"
+    },
+    {
+      "id": "consumer",
+      "name": "Tiêu dùng"
+    },
+    {
+      "id": "energy",
+      "name": "Năng lượng"
+    },
+    {
+      "id": "industrial",
+      "name": "Công nghiệp"
+    },
+    {
+      "id": "unknown",
+      "name": "Chưa xác định"
+    }
+  ],
+  "instruments": [
+    {
+      "symbol": "FPT",
+      "name": "Công nghệ FPT",
+      "exchange": "HOSE",
+      "sectorId": "technology",
+      "tvSymbol": "HOSE:FPT",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "HPG",
+      "name": "Tập đoàn Hòa Phát",
+      "exchange": "HOSE",
+      "sectorId": "materials",
+      "tvSymbol": "HOSE:HPG",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "VCB",
+      "name": "Vietcombank",
+      "exchange": "HOSE",
+      "sectorId": "banks",
+      "tvSymbol": "HOSE:VCB",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "MWG",
+      "name": "Thế Giới Di Động",
+      "exchange": "HOSE",
+      "sectorId": "retail",
+      "tvSymbol": "HOSE:MWG",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "MBB",
+      "name": "Ngân hàng Quân đội",
+      "exchange": "HOSE",
+      "sectorId": "banks",
+      "tvSymbol": "HOSE:MBB",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "TCB",
+      "name": "Techcombank",
+      "exchange": "HOSE",
+      "sectorId": "banks",
+      "tvSymbol": "HOSE:TCB",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "SSI",
+      "name": "Chứng khoán SSI",
+      "exchange": "HOSE",
+      "sectorId": "securities",
+      "tvSymbol": "HOSE:SSI",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "VHM",
+      "name": "Vinhomes",
+      "exchange": "HOSE",
+      "sectorId": "real-estate",
+      "tvSymbol": "HOSE:VHM",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "VNM",
+      "name": "Vinamilk",
+      "exchange": "HOSE",
+      "sectorId": "consumer",
+      "tvSymbol": "HOSE:VNM",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "ACB",
+      "name": "Ngân hàng Á Châu",
+      "exchange": "HOSE",
+      "sectorId": "banks",
+      "tvSymbol": "HOSE:ACB",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "GAS",
+      "name": "PV GAS",
+      "exchange": "HOSE",
+      "sectorId": "energy",
+      "tvSymbol": "HOSE:GAS",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "MSN",
+      "name": "Masan",
+      "exchange": "HOSE",
+      "sectorId": "consumer",
+      "tvSymbol": "HOSE:MSN",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "VPB",
+      "name": "VPBank",
+      "exchange": "HOSE",
+      "sectorId": "banks",
+      "tvSymbol": "HOSE:VPB",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "VIC",
+      "name": "Vingroup",
+      "exchange": "HOSE",
+      "sectorId": "real-estate",
+      "tvSymbol": "HOSE:VIC",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "HHP",
+      "name": "HHP Global",
+      "exchange": "HOSE",
+      "sectorId": "industrial",
+      "tvSymbol": "HOSE:HHP",
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "SHS",
+      "name": "Chứng khoán SHS",
+      "exchange": "HNX",
+      "sectorId": "securities",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "PVS",
+      "name": "Dịch vụ Kỹ thuật Dầu khí",
+      "exchange": "HNX",
+      "sectorId": "energy",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "IDC",
+      "name": "IDICO",
+      "exchange": "HNX",
+      "sectorId": "real-estate",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "QNS",
+      "name": "Đường Quảng Ngãi",
+      "exchange": "UPCOM",
+      "sectorId": "consumer",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "ACV",
+      "name": "Cảng Hàng không Việt Nam",
+      "exchange": "UPCOM",
+      "sectorId": "industrial",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    },
+    {
+      "symbol": "DEMO",
+      "name": "Mã chưa phân ngành (mẫu)",
+      "exchange": "UPCOM",
+      "sectorId": "unknown",
+      "tvSymbol": null,
+      "chartVerified": false,
+      "active": true
+    }
+  ],
+  "quotes": [
+    {
+      "symbol": "FPT",
+      "ref": 132500,
+      "ceil": 141775,
+      "floor": 123225,
+      "price": 134800,
+      "vol": 1300000,
+      "value": 173745000000,
+      "lastVolume": 300,
+      "open": 132500,
+      "high": 135000,
+      "low": 132300,
+      "foreignBuy": 10000,
+      "foreignSell": 8000,
+      "foreignRoom": null,
+      "score": 89,
+      "bids": [
+        {
+          "price": 134700,
+          "volume": 6000,
+          "kind": "limit"
+        },
+        {
+          "price": 134600,
+          "volume": 4000,
+          "kind": "limit"
+        },
+        {
+          "price": 134500,
+          "volume": 2000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 134900,
+          "volume": 2400,
+          "kind": "limit"
+        },
+        {
+          "price": 135000,
+          "volume": 4800,
+          "kind": "limit"
+        },
+        {
+          "price": 135100,
+          "volume": 7200,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        132500,
+        133105,
+        132523,
+        132247,
+        133079,
+        133320,
+        132605,
+        132728,
+        133590,
+        133424,
+        132784,
+        133293,
+        133982,
+        133473,
+        133095,
+        133880,
+        134235,
+        133538,
+        133542,
+        134417,
+        134367,
+        133683,
+        134089,
+        134847,
+        134425,
+        133955,
+        134677,
+        135140,
+        134478,
+        134364
+      ]
+    },
+    {
+      "symbol": "HPG",
+      "ref": 27200,
+      "ceil": 29104,
+      "floor": 25296,
+      "price": 27850,
+      "vol": 1730000,
+      "value": 47618250000,
+      "lastVolume": 400,
+      "open": 27200,
+      "high": 27950,
+      "low": 27100,
+      "foreignBuy": 20000,
+      "foreignSell": 16000,
+      "foreignRoom": null,
+      "score": 82,
+      "bids": [
+        {
+          "price": 27800,
+          "volume": 9000,
+          "kind": "limit"
+        },
+        {
+          "price": 27750,
+          "volume": 6000,
+          "kind": "limit"
+        },
+        {
+          "price": 27700,
+          "volume": 3000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 27900,
+          "volume": 3600,
+          "kind": "limit"
+        },
+        {
+          "price": 27950,
+          "volume": 7200,
+          "kind": "limit"
+        },
+        {
+          "price": 28000,
+          "volume": 10800,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        27292,
+        27269,
+        27141,
+        27247,
+        27398,
+        27304,
+        27228,
+        27393,
+        27477,
+        27341,
+        27342,
+        27528,
+        27530,
+        27394,
+        27478,
+        27643,
+        27567,
+        27472,
+        27623,
+        27729,
+        27602,
+        27579,
+        27763,
+        27789,
+        27649,
+        27710,
+        27885,
+        27829,
+        27719,
+        27854
+      ]
+    },
+    {
+      "symbol": "VCB",
+      "ref": 91500,
+      "ceil": 97905,
+      "floor": 85095,
+      "price": 92100,
+      "vol": 2160000,
+      "value": 198288000000,
+      "lastVolume": 500,
+      "open": 91500,
+      "high": 92300,
+      "low": 91300,
+      "foreignBuy": 30000,
+      "foreignSell": 24000,
+      "foreignRoom": null,
+      "score": 76,
+      "bids": [
+        {
+          "price": 92000,
+          "volume": 12000,
+          "kind": "limit"
+        },
+        {
+          "price": 91900,
+          "volume": 8000,
+          "kind": "limit"
+        },
+        {
+          "price": 91800,
+          "volume": 4000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 92200,
+          "volume": 4800,
+          "kind": "limit"
+        },
+        {
+          "price": 92300,
+          "volume": 9600,
+          "kind": "limit"
+        },
+        {
+          "price": 92400,
+          "volume": 14400,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        91833,
+        91327,
+        91259,
+        91829,
+        91797,
+        91281,
+        91493,
+        92001,
+        91705,
+        91320,
+        91762,
+        92079,
+        91603,
+        91455,
+        92016,
+        92066,
+        91539,
+        91671,
+        92211,
+        91986,
+        91551,
+        91935,
+        92318,
+        91882,
+        91658,
+        92198,
+        92330,
+        91802,
+        91853,
+        92415
+      ]
+    },
+    {
+      "symbol": "MWG",
+      "ref": 62800,
+      "ceil": 67196,
+      "floor": 58404,
+      "price": 64200,
+      "vol": 2590000,
+      "value": 164465000000,
+      "lastVolume": 600,
+      "open": 62800,
+      "high": 64400,
+      "low": 62600,
+      "foreignBuy": 40000,
+      "foreignSell": 32000,
+      "foreignRoom": null,
+      "score": 85,
+      "bids": [
+        {
+          "price": 64100,
+          "volume": 15000,
+          "kind": "limit"
+        },
+        {
+          "price": 64000,
+          "volume": 10000,
+          "kind": "limit"
+        },
+        {
+          "price": 63900,
+          "volume": 5000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 64300,
+          "volume": 6000,
+          "kind": "limit"
+        },
+        {
+          "price": 64400,
+          "volume": 12000,
+          "kind": "limit"
+        },
+        {
+          "price": 64500,
+          "volume": 18000,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        62835,
+        62597,
+        62926,
+        63188,
+        62901,
+        62821,
+        63238,
+        63320,
+        62991,
+        63103,
+        63512,
+        63403,
+        63131,
+        63419,
+        63726,
+        63468,
+        63337,
+        63738,
+        63874,
+        63547,
+        63604,
+        64025,
+        63969,
+        63671,
+        63913,
+        64258,
+        64036,
+        63858,
+        64234,
+        64425
+      ]
+    },
+    {
+      "symbol": "MBB",
+      "ref": 24100,
+      "ceil": 25787,
+      "floor": 22413,
+      "price": 24550,
+      "vol": 3020000,
+      "value": 73461500000,
+      "lastVolume": 700,
+      "open": 24100,
+      "high": 24650,
+      "low": 24000,
+      "foreignBuy": 50000,
+      "foreignSell": 40000,
+      "foreignRoom": null,
+      "score": 78,
+      "bids": [
+        {
+          "price": 24500,
+          "volume": 18000,
+          "kind": "limit"
+        },
+        {
+          "price": 24450,
+          "volume": 12000,
+          "kind": "limit"
+        },
+        {
+          "price": 24400,
+          "volume": 6000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 24600,
+          "volume": 7200,
+          "kind": "limit"
+        },
+        {
+          "price": 24650,
+          "volume": 14400,
+          "kind": "limit"
+        },
+        {
+          "price": 24700,
+          "volume": 21600,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        24027,
+        24062,
+        24218,
+        24177,
+        24068,
+        24171,
+        24289,
+        24190,
+        24133,
+        24282,
+        24336,
+        24208,
+        24222,
+        24381,
+        24361,
+        24242,
+        24328,
+        24460,
+        24375,
+        24300,
+        24439,
+        24513,
+        24390,
+        24382,
+        24543,
+        24544,
+        24419,
+        24485,
+        24628,
+        24560
+      ]
+    },
+    {
+      "symbol": "TCB",
+      "ref": 23600,
+      "ceil": 25252,
+      "floor": 21948,
+      "price": 23400,
+      "vol": 3450000,
+      "value": 81075000000,
+      "lastVolume": 800,
+      "open": 23600,
+      "high": 23700,
+      "low": 23300,
+      "foreignBuy": 60000,
+      "foreignSell": 48000,
+      "foreignRoom": null,
+      "score": 68,
+      "bids": [
+        {
+          "price": 23350,
+          "volume": 21000,
+          "kind": "limit"
+        },
+        {
+          "price": 23300,
+          "volume": 14000,
+          "kind": "limit"
+        },
+        {
+          "price": 23250,
+          "volume": 7000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 23450,
+          "volume": 8400,
+          "kind": "limit"
+        },
+        {
+          "price": 23500,
+          "volume": 16800,
+          "kind": "limit"
+        },
+        {
+          "price": 23550,
+          "volume": 25200,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        23509,
+        23631,
+        23667,
+        23520,
+        23507,
+        23641,
+        23605,
+        23464,
+        23522,
+        23632,
+        23530,
+        23431,
+        23542,
+        23597,
+        23456,
+        23422,
+        23556,
+        23540,
+        23394,
+        23432,
+        23553,
+        23468,
+        23354,
+        23452,
+        23526,
+        23393,
+        23338,
+        23470,
+        23475,
+        23326
+      ]
+    },
+    {
+      "symbol": "SSI",
+      "ref": 32100,
+      "ceil": 34347,
+      "floor": 29853,
+      "price": 32750,
+      "vol": 3880000,
+      "value": 125809000000,
+      "lastVolume": 900,
+      "open": 32100,
+      "high": 32850,
+      "low": 32000,
+      "foreignBuy": 70000,
+      "foreignSell": 56000,
+      "foreignRoom": null,
+      "score": 81,
+      "bids": [
+        {
+          "price": 32700,
+          "volume": 24000,
+          "kind": "limit"
+        },
+        {
+          "price": 32650,
+          "volume": 16000,
+          "kind": "limit"
+        },
+        {
+          "price": 32600,
+          "volume": 8000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 32800,
+          "volume": 9600,
+          "kind": "limit"
+        },
+        {
+          "price": 32850,
+          "volume": 19200,
+          "kind": "limit"
+        },
+        {
+          "price": 32900,
+          "volume": 28800,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        32064,
+        32249,
+        32148,
+        32040,
+        32219,
+        32332,
+        32174,
+        32152,
+        32367,
+        32384,
+        32215,
+        32293,
+        32491,
+        32414,
+        32286,
+        32447,
+        32584,
+        32438,
+        32389,
+        32598,
+        32644,
+        32473,
+        32522,
+        32731,
+        32679,
+        32534,
+        32674,
+        32833,
+        32703,
+        32628
+      ]
+    },
+    {
+      "symbol": "VHM",
+      "ref": 43500,
+      "ceil": 46545,
+      "floor": 40455,
+      "price": 42900,
+      "vol": 4310000,
+      "value": 186192000000,
+      "lastVolume": 1000,
+      "open": 43500,
+      "high": 43600,
+      "low": 42800,
+      "foreignBuy": 80000,
+      "foreignSell": 64000,
+      "foreignRoom": null,
+      "score": 54,
+      "bids": [
+        {
+          "price": 42850,
+          "volume": 27000,
+          "kind": "limit"
+        },
+        {
+          "price": 42800,
+          "volume": 18000,
+          "kind": "limit"
+        },
+        {
+          "price": 42750,
+          "volume": 9000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 42950,
+          "volume": 10800,
+          "kind": "limit"
+        },
+        {
+          "price": 43000,
+          "volume": 21600,
+          "kind": "limit"
+        },
+        {
+          "price": 43050,
+          "volume": 32400,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        43614,
+        43595,
+        43315,
+        43360,
+        43581,
+        43432,
+        43202,
+        43364,
+        43506,
+        43261,
+        43136,
+        43366,
+        43385,
+        43103,
+        43110,
+        43343,
+        43230,
+        42979,
+        43110,
+        43281,
+        43059,
+        42899,
+        43115,
+        43173,
+        42895,
+        42862,
+        43102,
+        43026,
+        42759,
+        42857
+      ]
+    },
+    {
+      "symbol": "VNM",
+      "ref": 67800,
+      "ceil": 72546,
+      "floor": 63054,
+      "price": 67800,
+      "vol": 4740000,
+      "value": 321372000000,
+      "lastVolume": 1100,
+      "open": 67800,
+      "high": 68000,
+      "low": 67600,
+      "foreignBuy": 90000,
+      "foreignSell": 72000,
+      "foreignRoom": null,
+      "score": 62,
+      "bids": [
+        {
+          "price": 67700,
+          "volume": 30000,
+          "kind": "limit"
+        },
+        {
+          "price": 67600,
+          "volume": 20000,
+          "kind": "limit"
+        },
+        {
+          "price": 67500,
+          "volume": 10000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 67900,
+          "volume": 12000,
+          "kind": "limit"
+        },
+        {
+          "price": 68000,
+          "volume": 24000,
+          "kind": "limit"
+        },
+        {
+          "price": 68100,
+          "volume": 36000,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        68068,
+        67726,
+        67551,
+        67938,
+        68014,
+        67607,
+        67636,
+        68035,
+        67903,
+        67538,
+        67764,
+        68071,
+        67766,
+        67538,
+        67902,
+        68036,
+        67638,
+        67606,
+        68013,
+        67940,
+        67551,
+        67724,
+        68068,
+        67806,
+        67530,
+        67863,
+        68053,
+        67672,
+        67580,
+        67985
+      ]
+    },
+    {
+      "symbol": "ACB",
+      "ref": 25100,
+      "ceil": 26857,
+      "floor": 23343,
+      "price": 25450,
+      "vol": 5170000,
+      "value": 130671750000,
+      "lastVolume": 1200,
+      "open": 25100,
+      "high": 25550,
+      "low": 25000,
+      "foreignBuy": 100000,
+      "foreignSell": 80000,
+      "foreignRoom": null,
+      "score": 74,
+      "bids": [
+        {
+          "price": 25400,
+          "volume": 33000,
+          "kind": "limit"
+        },
+        {
+          "price": 25350,
+          "volume": 22000,
+          "kind": "limit"
+        },
+        {
+          "price": 25300,
+          "volume": 11000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 25500,
+          "volume": 13200,
+          "kind": "limit"
+        },
+        {
+          "price": 25550,
+          "volume": 26400,
+          "kind": "limit"
+        },
+        {
+          "price": 25600,
+          "volume": 39600,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        25141,
+        25016,
+        25108,
+        25237,
+        25139,
+        25062,
+        25207,
+        25274,
+        25139,
+        25134,
+        25297,
+        25287,
+        25154,
+        25226,
+        25368,
+        25287,
+        25193,
+        25325,
+        25412,
+        25285,
+        25258,
+        25419,
+        25432,
+        25294,
+        25345,
+        25497,
+        25434,
+        25326,
+        25443,
+        25549
+      ]
+    },
+    {
+      "symbol": "GAS",
+      "ref": 78200,
+      "ceil": 83674,
+      "floor": 72726,
+      "price": 77600,
+      "vol": 5600000,
+      "value": 436240000000,
+      "lastVolume": 1300,
+      "open": 78200,
+      "high": 78400,
+      "low": 77400,
+      "foreignBuy": 110000,
+      "foreignSell": 88000,
+      "foreignRoom": null,
+      "score": 58,
+      "bids": [
+        {
+          "price": 77500,
+          "volume": 36000,
+          "kind": "limit"
+        },
+        {
+          "price": 77400,
+          "volume": 24000,
+          "kind": "limit"
+        },
+        {
+          "price": 77300,
+          "volume": 12000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 77700,
+          "volume": 14400,
+          "kind": "limit"
+        },
+        {
+          "price": 77800,
+          "volume": 28800,
+          "kind": "limit"
+        },
+        {
+          "price": 77900,
+          "volume": 43200,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        78030,
+        77941,
+        78390,
+        78317,
+        77840,
+        77989,
+        78381,
+        78084,
+        77722,
+        78066,
+        78292,
+        77843,
+        77686,
+        78129,
+        78125,
+        77637,
+        77719,
+        78140,
+        77902,
+        77496,
+        77792,
+        78075,
+        77660,
+        77437,
+        77863,
+        77929,
+        77439,
+        77452,
+        77892,
+        77719
+      ]
+    },
+    {
+      "symbol": "MSN",
+      "ref": 74500,
+      "ceil": 79715,
+      "floor": 69285,
+      "price": 75800,
+      "vol": 6029999,
+      "value": 453154424850,
+      "lastVolume": 1400,
+      "open": 74500,
+      "high": 76000,
+      "low": 74300,
+      "foreignBuy": 120000,
+      "foreignSell": 96000,
+      "foreignRoom": null,
+      "score": 73,
+      "bids": [
+        {
+          "price": 75700,
+          "volume": 39000,
+          "kind": "limit"
+        },
+        {
+          "price": 75600,
+          "volume": 26000,
+          "kind": "limit"
+        },
+        {
+          "price": 75500,
+          "volume": 13000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 75900,
+          "volume": 15600,
+          "kind": "limit"
+        },
+        {
+          "price": 76000,
+          "volume": 31200,
+          "kind": "limit"
+        },
+        {
+          "price": 76100,
+          "volume": 46800,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        74202,
+        74585,
+        74877,
+        74521,
+        74421,
+        74905,
+        74981,
+        74579,
+        74707,
+        75178,
+        75029,
+        74698,
+        75033,
+        75379,
+        75056,
+        74895,
+        75360,
+        75503,
+        75102,
+        75164,
+        75650,
+        75564,
+        75201,
+        75482,
+        75874,
+        75593,
+        75375,
+        75813,
+        76019,
+        75629
+      ]
+    },
+    {
+      "symbol": "VPB",
+      "ref": 19200,
+      "ceil": 20544,
+      "floor": 17856,
+      "price": 19050,
+      "vol": 6460000,
+      "value": 123547500000,
+      "lastVolume": 1500,
+      "open": 19200,
+      "high": 19300,
+      "low": 18950,
+      "foreignBuy": 130000,
+      "foreignSell": 104000,
+      "foreignRoom": null,
+      "score": 61,
+      "bids": [
+        {
+          "price": 19000,
+          "volume": 42000,
+          "kind": "limit"
+        },
+        {
+          "price": 18950,
+          "volume": 28000,
+          "kind": "limit"
+        },
+        {
+          "price": 18900,
+          "volume": 14000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 19100,
+          "volume": 16800,
+          "kind": "limit"
+        },
+        {
+          "price": 19150,
+          "volume": 33600,
+          "kind": "limit"
+        },
+        {
+          "price": 19200,
+          "volume": 50400,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        19159,
+        19264,
+        19213,
+        19109,
+        19176,
+        19251,
+        19153,
+        19091,
+        19193,
+        19217,
+        19097,
+        19093,
+        19202,
+        19167,
+        19055,
+        19107,
+        19194,
+        19108,
+        19031,
+        19126,
+        19166,
+        19050,
+        19028,
+        19138,
+        19120,
+        19002,
+        19039,
+        19135,
+        19062,
+        18973
+      ]
+    },
+    {
+      "symbol": "VIC",
+      "ref": 42300,
+      "ceil": 45261,
+      "floor": 39339,
+      "price": 42800,
+      "vol": 6890000,
+      "value": 293169500000,
+      "lastVolume": 1600,
+      "open": 42300,
+      "high": 42900,
+      "low": 42200,
+      "foreignBuy": 140000,
+      "foreignSell": 112000,
+      "foreignRoom": null,
+      "score": 65,
+      "bids": [
+        {
+          "price": 42750,
+          "volume": 45000,
+          "kind": "limit"
+        },
+        {
+          "price": 42700,
+          "volume": 30000,
+          "kind": "limit"
+        },
+        {
+          "price": 42650,
+          "volume": 15000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 42850,
+          "volume": 18000,
+          "kind": "limit"
+        },
+        {
+          "price": 42900,
+          "volume": 36000,
+          "kind": "limit"
+        },
+        {
+          "price": 42950,
+          "volume": 54000,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        42371,
+        42460,
+        42227,
+        42236,
+        42507,
+        42466,
+        42245,
+        42382,
+        42606,
+        42451,
+        42305,
+        42537,
+        42662,
+        42437,
+        42409,
+        42680,
+        42677,
+        42446,
+        42547,
+        42791,
+        42666,
+        42493,
+        42702,
+        42860,
+        42649,
+        42584,
+        42851,
+        42886,
+        42649,
+        42714
+      ]
+    },
+    {
+      "symbol": "HHP",
+      "ref": 11200,
+      "ceil": 11984,
+      "floor": 10416,
+      "price": 11450,
+      "vol": 7319999,
+      "value": 82898988675,
+      "lastVolume": 1700,
+      "open": 11200,
+      "high": 11550,
+      "low": 11100,
+      "foreignBuy": 150000,
+      "foreignSell": 120000,
+      "foreignRoom": null,
+      "score": 70,
+      "bids": [
+        {
+          "price": 11400,
+          "volume": 48000,
+          "kind": "limit"
+        },
+        {
+          "price": 11350,
+          "volume": 32000,
+          "kind": "limit"
+        },
+        {
+          "price": 11300,
+          "volume": 16000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 11500,
+          "volume": 19200,
+          "kind": "limit"
+        },
+        {
+          "price": 11550,
+          "volume": 38400,
+          "kind": "limit"
+        },
+        {
+          "price": 11600,
+          "volume": 57600,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        11244,
+        11209,
+        11173,
+        11237,
+        11276,
+        11221,
+        11216,
+        11291,
+        11297,
+        11239,
+        11268,
+        11338,
+        11310,
+        11267,
+        11325,
+        11373,
+        11322,
+        11307,
+        11381,
+        11397,
+        11338,
+        11357,
+        11430,
+        11412,
+        11363,
+        11413,
+        11469,
+        11423,
+        11399,
+        11470
+      ]
+    },
+    {
+      "symbol": "SHS",
+      "ref": 17000,
+      "ceil": 18700,
+      "floor": 15300,
+      "price": 17200,
+      "vol": 7750000,
+      "value": 132525000000,
+      "lastVolume": 1800,
+      "open": 17000,
+      "high": 17300,
+      "low": 16900,
+      "foreignBuy": 160000,
+      "foreignSell": 128000,
+      "foreignRoom": null,
+      "score": 64,
+      "bids": [
+        {
+          "price": 17150,
+          "volume": 51000,
+          "kind": "limit"
+        },
+        {
+          "price": 17100,
+          "volume": 34000,
+          "kind": "limit"
+        },
+        {
+          "price": 17050,
+          "volume": 17000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 17250,
+          "volume": 20400,
+          "kind": "limit"
+        },
+        {
+          "price": 17300,
+          "volume": 40800,
+          "kind": "limit"
+        },
+        {
+          "price": 17350,
+          "volume": 61200,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        17044,
+        16950,
+        16984,
+        17085,
+        17041,
+        16967,
+        17046,
+        17115,
+        17033,
+        17001,
+        17106,
+        17127,
+        17032,
+        17051,
+        17157,
+        17126,
+        17044,
+        17112,
+        17192,
+        17119,
+        17073,
+        17173,
+        17209,
+        17115,
+        17119,
+        17228,
+        17211,
+        17123,
+        17177,
+        17268
+      ]
+    },
+    {
+      "symbol": "PVS",
+      "ref": 34000,
+      "ceil": 37400,
+      "floor": 30600,
+      "price": 33600,
+      "vol": 8180000,
+      "value": 276484000000,
+      "lastVolume": 1900,
+      "open": 34000,
+      "high": 34100,
+      "low": 33500,
+      "foreignBuy": 170000,
+      "foreignSell": 136000,
+      "foreignRoom": null,
+      "score": 63,
+      "bids": [
+        {
+          "price": 33550,
+          "volume": 54000,
+          "kind": "limit"
+        },
+        {
+          "price": 33500,
+          "volume": 36000,
+          "kind": "limit"
+        },
+        {
+          "price": 33450,
+          "volume": 18000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 33650,
+          "volume": 21600,
+          "kind": "limit"
+        },
+        {
+          "price": 33700,
+          "volume": 43200,
+          "kind": "limit"
+        },
+        {
+          "price": 33750,
+          "volume": 64800,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        33961,
+        33862,
+        34044,
+        34064,
+        33846,
+        33851,
+        34036,
+        33953,
+        33758,
+        33860,
+        33998,
+        33829,
+        33703,
+        33874,
+        33924,
+        33710,
+        33683,
+        33874,
+        33820,
+        33612,
+        33688,
+        33845,
+        33698,
+        33548,
+        33703,
+        33781,
+        33575,
+        33518,
+        33708,
+        33685
+      ]
+    },
+    {
+      "symbol": "IDC",
+      "ref": 51000,
+      "ceil": 56100,
+      "floor": 45900,
+      "price": 51800,
+      "vol": 8610000,
+      "value": 442554000000,
+      "lastVolume": 2000,
+      "open": 51000,
+      "high": 52000,
+      "low": 50800,
+      "foreignBuy": 180000,
+      "foreignSell": 144000,
+      "foreignRoom": null,
+      "score": 71,
+      "bids": [
+        {
+          "price": 51700,
+          "volume": 57000,
+          "kind": "limit"
+        },
+        {
+          "price": 51600,
+          "volume": 38000,
+          "kind": "limit"
+        },
+        {
+          "price": 51500,
+          "volume": 19000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 51900,
+          "volume": 22800,
+          "kind": "limit"
+        },
+        {
+          "price": 52000,
+          "volume": 45600,
+          "kind": "limit"
+        },
+        {
+          "price": 52100,
+          "volume": 68400,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        50804,
+        50997,
+        51259,
+        51061,
+        50912,
+        51211,
+        51345,
+        51074,
+        51072,
+        51406,
+        51384,
+        51118,
+        51271,
+        51560,
+        51395,
+        51211,
+        51485,
+        51661,
+        51403,
+        51356,
+        51688,
+        51712,
+        51436,
+        51546,
+        51856,
+        51728,
+        51514,
+        51759,
+        51972,
+        51735
+      ]
+    },
+    {
+      "symbol": "QNS",
+      "ref": 47000,
+      "ceil": 54050,
+      "floor": 39950,
+      "price": 47400,
+      "vol": 9040000,
+      "value": 426688000000,
+      "lastVolume": 2100,
+      "open": 47000,
+      "high": 47500,
+      "low": 46900,
+      "foreignBuy": 190000,
+      "foreignSell": 152000,
+      "foreignRoom": null,
+      "score": 67,
+      "bids": [
+        {
+          "price": 47350,
+          "volume": 60000,
+          "kind": "limit"
+        },
+        {
+          "price": 47300,
+          "volume": 40000,
+          "kind": "limit"
+        },
+        {
+          "price": 47250,
+          "volume": 20000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 47450,
+          "volume": 24000,
+          "kind": "limit"
+        },
+        {
+          "price": 47500,
+          "volume": 48000,
+          "kind": "limit"
+        },
+        {
+          "price": 47550,
+          "volume": 72000,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        46859,
+        47155,
+        47132,
+        46873,
+        46994,
+        47253,
+        47097,
+        46909,
+        47145,
+        47303,
+        47057,
+        46994,
+        47287,
+        47306,
+        47039,
+        47120,
+        47397,
+        47276,
+        47061,
+        47269,
+        47461,
+        47235,
+        47132,
+        47416,
+        47477,
+        47209,
+        47248,
+        47537,
+        47455,
+        47218
+      ]
+    },
+    {
+      "symbol": "ACV",
+      "ref": 95000,
+      "ceil": 109250,
+      "floor": 80750,
+      "price": 93800,
+      "vol": 9470000,
+      "value": 893968000000,
+      "lastVolume": 2200,
+      "open": 95000,
+      "high": 95200,
+      "low": 93600,
+      "foreignBuy": 200000,
+      "foreignSell": 160000,
+      "foreignRoom": null,
+      "score": 66,
+      "bids": [
+        {
+          "price": 93700,
+          "volume": 63000,
+          "kind": "limit"
+        },
+        {
+          "price": 93600,
+          "volume": 42000,
+          "kind": "limit"
+        },
+        {
+          "price": 93500,
+          "volume": 21000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 93900,
+          "volume": 25200,
+          "kind": "limit"
+        },
+        {
+          "price": 94000,
+          "volume": 50400,
+          "kind": "limit"
+        },
+        {
+          "price": 94100,
+          "volume": 75600,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        95057,
+        95324,
+        94766,
+        94550,
+        95070,
+        95059,
+        94448,
+        94523,
+        95021,
+        94724,
+        94209,
+        94545,
+        94880,
+        94365,
+        94069,
+        94567,
+        94641,
+        94030,
+        94021,
+        94540,
+        94323,
+        93766,
+        94033,
+        94428,
+        93965,
+        93596,
+        94061,
+        94217,
+        93619,
+        93523
+      ]
+    },
+    {
+      "symbol": "DEMO",
+      "ref": 10000,
+      "ceil": 11500,
+      "floor": 8500,
+      "price": 10000,
+      "vol": 9900000,
+      "value": 99000000000,
+      "lastVolume": 2300,
+      "open": 10000,
+      "high": 10100,
+      "low": 9900,
+      "foreignBuy": 210000,
+      "foreignSell": 168000,
+      "foreignRoom": null,
+      "score": null,
+      "bids": [
+        {
+          "price": 9950,
+          "volume": 66000,
+          "kind": "limit"
+        },
+        {
+          "price": 9900,
+          "volume": 44000,
+          "kind": "limit"
+        },
+        {
+          "price": 9850,
+          "volume": 22000,
+          "kind": "limit"
+        }
+      ],
+      "asks": [
+        {
+          "price": 10050,
+          "volume": 26400,
+          "kind": "limit"
+        },
+        {
+          "price": 10100,
+          "volume": 52800,
+          "kind": "limit"
+        },
+        {
+          "price": 10150,
+          "volume": 79200,
+          "kind": "limit"
+        }
+      ],
+      "spark": [
+        10037,
+        10011,
+        9961,
+        9999,
+        10040,
+        9991,
+        9962,
+        10019,
+        10033,
+        9973,
+        9974,
+        10034,
+        10017,
+        9962,
+        9993,
+        10040,
+        9997,
+        9961,
+        10013,
+        10036,
+        9978,
+        9970,
+        10030,
+        10022,
+        9964,
+        9987,
+        10039,
+        10003,
+        9960,
+        10007
+      ]
+    }
+  ]
+}
