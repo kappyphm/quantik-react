@@ -4,6 +4,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install --global pnpm@9 && pnpm install --frozen-lockfile
 COPY index.html vite.config.js ./
 COPY src ./src
+COPY shared ./shared
+COPY public ./public
 RUN pnpm build
 
 FROM nginx:1.27-alpine
