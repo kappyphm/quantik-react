@@ -189,3 +189,11 @@ export const getLatestScan = async signal => {
   const items = await fetchScanItems(signal);
   return normalizeScan(mapBackendScan(meta, items));
 };
+
+/** Chi tiết 1 mã trong bản quét đã công bố (public, không cần session). */
+export const getSymbolDetail = (symbol, signal) =>
+  v1get(`/scans/latest/results/${encodeURIComponent(String(symbol).toUpperCase())}`, signal);
+
+/** Nến OHLCV của 1 mã từ snapshot đã công bố (public, tối đa 260 phiên). */
+export const getSymbolOhlcv = (symbol, limit = 260, signal) =>
+  v1get(`/scans/latest/results/${encodeURIComponent(String(symbol).toUpperCase())}/ohlcv?limit=${limit}`, signal);
