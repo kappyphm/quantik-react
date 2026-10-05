@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {getJob,jobImageUrl,listModules,startQuant} from '../api.js';
+import {getJob,listModules,startQuant} from '../api.js';
 import AnalysisReport from './AnalysisReport.jsx';
 import AnnotatedText from './AnnotatedText.jsx';
 import TermHint from './TermHint.jsx';
@@ -9,7 +9,7 @@ function useQuantJob(){
  useEffect(()=>()=>{clearTimeout(timer.current);generation.current++;},[]);
  const run=useCallback(async(symbol,modules)=>{clearTimeout(timer.current);const token=++generation.current;setError('');setJob({status:'queued',modules:[]});
  try{const {id}=await startQuant(symbol,modules);if(token!==generation.current)return;
- const tick=async()=>{if(token!==generation.current)return;try{const next=await getJob(id);if(token!==generation.current)return;setJob(next);if(next.status==='error'){setError(next.error||'Pipeline báo lỗi.');return;}if(next.status!=='done')timer.current=setTimeout(tick,700);}catch{if(token===generation.current){setError('Mất kết nối khi chạy phân tích. Vui lòng thử lại.');setJob({status:'error',modules:[]});}}};await tick();
+ const tick=async()=>{if(token!==generation.current)return;try{const next=await getJob(id);if(token!==generation.current)return;setJob(next);if(next.status==='error'){setError(next.error||'Pipeline báo lỗi.');return;}if(next.status!=='done')timer.current=setTimeout(tick,2000);}catch{if(token===generation.current){setError('Mất kết nối khi chạy phân tích. Vui lòng thử lại.');setJob({status:'error',modules:[]});}}};await tick();
  }catch{if(token===generation.current){setError('Không kết nối được dịch vụ phân tích. Kiểm tra Python API rồi thử lại.');setJob({status:'error',modules:[]});}}},[]);
  const preview=useCallback(symbol=>{clearTimeout(timer.current);generation.current++;setError('');const r=demoSnapshot.quotes.find(x=>x.symbol===symbol);setJob({status:'done',mode:'demo',local:true,asOf:demoSnapshot.asOf,modules:[],summary:r?{score:r.score,action:'Kết quả mẫu giao diện',entry:r.price/1000,stop:r.price*.95/1000,tp1:r.price*1.1/1000,tp2:r.price*1.15/1000,net_r:2,atr_pct:null}:null,metrics:[]});},[]);
  return {job,error,run,preview};
@@ -33,7 +33,7 @@ export default function QuantPanel({sym,autoRun=false}){
  <div className="info-banner">{job.mode==='demo'?'Kết quả mô phỏng':job.mode==='live'||job.mode==='eod'?'Kết quả từ API':'Nguồn mô hình chưa xác nhận'} · {job.asOf?new Date(job.asOf).toLocaleString('vi-VN'):'Chưa có thời điểm dữ liệu'}{job.local&&' · Mẫu tĩnh, không chạy mô hình'}</div>
  {s&&<div className="keyrow">{[['quant_score','Điểm Quant',s.score,' / 100'],[null,'Khuyến nghị',s.action,''],['entry','Điểm vào',fmt(s.entry),' nghìn ₫'],['stop_loss','Cắt lỗ',fmt(s.stop),' nghìn ₫'],['take_profit','Chốt lời 1',fmt(s.tp1),' nghìn ₫'],['take_profit','Chốt lời 2',fmt(s.tp2),' nghìn ₫'],['risk_reward','Lãi/lỗ ròng',fmt(s.net_r),'x'],['atr','ATR / Giá',fmt(s.atr_pct),'%']].map(([id,label,value,unit])=><div key={label}><small>{id?<TermHint id={id}>{label}</TermHint>:label}</small><b>{value==null?'—':`${value}${unit}`}</b></div>)}</div>}
  {/* Keep the original main pipeline image output and its position below the summary. */}
- {!job.local&&job.id&&!imageError&&<img className="qimg" src={jobImageUrl(job.id)} onError={()=>setImageError(true)} alt={`Tổng quan mô hình quant của ${sym}`}/>}
+  {!job.local&&job.imageUrl&&!imageError&&<img className="qimg" src={job.imageUrl} onError={()=>setImageError(true)} alt={`Tổng quan mô hình quant của ${sym}`}/>}
  {imageError&&<p className="err">Ảnh tổng quan chưa tải được; báo cáo dạng chữ vẫn có thể xem.</p>}
  {job.local&&<p className="quant-visual-note">Ảnh phân tích từ pipeline sẽ xuất hiện tại đây khi kết nối Python API. Bản mẫu này chỉ minh họa bố cục.</p>}
  <AnalysisReport sym={sym} job={job}/>

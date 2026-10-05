@@ -11,7 +11,7 @@ export default function useMarket(){
     const f={};next.quotes.forEach(r=>{const prev=previous[r.symbol];if(prev!=null&&r.price!=null&&prev!==r.price)f[r.symbol]=r.price>prev?'flash-up':'flash-dn';previous[r.symbol]=r.price;});
     setFlash(f);setSnapshot(next);setLastSuccess(new Date().toISOString());setStatus('connected');
    }catch(e){if(alive&&e.name!=='AbortError')setStatus('offline');}
-   if(alive)timer=setTimeout(load,5000);
+   if(alive)timer=setTimeout(load,60000);
   };load();return()=>{alive=false;controller?.abort();clearTimeout(timer);};
  },[]);
  const rows=snapshot.quotes.map(r=>({...r,...(snapshot.instruments.find(i=>i.symbol===r.symbol)||{name:r.symbol,sectorId:'unknown',exchange:'UNKNOWN'})}));

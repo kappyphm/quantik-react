@@ -27,6 +27,57 @@ export function normalizeScan(data) {
 }
 
 export const demoScan = () => normalizeScan(demo);
+
+const holdingSessions = value => {
+  const match = /(\d+)\s*phiên/i.exec(String(value ?? ''));
+  return match ? parseInt(match[1], 10) : null;
+};
+
+const validScore = value => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(100, Math.max(0, n));
+};
+
+/**
+ * Map bản quét backend (/api/v1/scans/latest + results) về envelope mà
+ * normalizeScan/ScanPage đang dùng. Mã chưa phân tích xong giữ hàng với
+ * score null để bộ lọc "Chưa có kết quả" vẫn thấy.
+ */
+export function mapBackendScan(meta, items) {
+  const rows = [];
+  const seen = new Set();
+  for (const item of items || []) {
+    const symbol = String(item.symbol || '').toUpperCase();
+    if (!/^[A-Z0-9]{3,5}$/.test(symbol) || seen.has(symbol)) continue;
+    seen.add(symbol);
+    const completed = item.analysis_status === 'completed';
+    rows.push({
+      symbol,
+      name: item.name || symbol,
+      exchange: item.exchange || '—',
+      score: completed ? validScore(item.score) : null,
+      passed: completed ? !!item.gate_pass : null,
+      holdingSessions: completed ? holdingSessions(item.hold_plan) : null,
+      recommendation: completed ? (item.recommendation || null) : null,
+      explanation: item.gate_explanation || null,
+      rating: completed ? (item.rating || null) : null,
+      indexTrend: item.vni_trend || null,
+      sector: item.sector || null,
+    });
+  }
+  return {
+    mode: 'published',
+    runId: meta.id,
+    source: meta.source_version || 'quantik-backend',
+    session: meta.slot || 'MANUAL',
+    publishedAt: meta.published_at,
+    dataAsOf: String(meta.data_as_of || '').slice(0, 10),
+    cadenceMinutes: 720,
+    universeCount: meta.universe_count || rows.length,
+    rows,
+  };
+}
 const searchKey = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase();
 export function filterScan(rows, {query='',exchange='ALL',recommendation='ALL',passed='ALL',direction='desc'} = {}) {
   const key = searchKey(query.trim());
