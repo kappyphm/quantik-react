@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import PriceBoard from './components/PriceBoard.jsx';
 import StockModal from './components/StockModal.jsx';
 import QuantPanel from './components/QuantPanel.jsx';
-import { demoRows } from './demo.js';
 import NavIcon from './components/NavIcon.jsx';
 import ScanPage from './components/ScanPage.jsx';
 
@@ -39,7 +38,7 @@ export default function App() {
     <form className="command-line" onSubmit={execute}><label htmlFor="command">⌕ <span>Tra cứu nhanh</span></label><input ref={input} id="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="Nhập mã cổ phiếu · FPT hoặc FPT Q" autoComplete="off" spellCheck="false"/><kbd>/</kbd><button type="submit">Mở ↗</button></form>{notice&&<p role="status" className="err">{notice}</p>}
     {(['market','watch','board','sectors'].includes(section))&&<PriceBoard section={section} onOpen={sym=>setOpen({sym,tab:'overview'})} onQuant={sym=>setOpen({sym,tab:'quant'})}/>}
     <div hidden={section!=='scan'}><ScanPage onOpen={sym=>setOpen({sym,tab:'overview'})}/></div>
-    {section==='quant'&&<section className="analysis-page"><div className="analysis-toolbar"><label htmlFor="analysis-symbol">Cổ phiếu cần phân tích</label><select id="analysis-symbol" value={symbol} onChange={e=>setSymbol(e.target.value)}>{demoRows.map(r=><option key={r.sym} value={r.sym}>{r.sym} · {r.name}</option>)}</select><button className="btn ghost" onClick={()=>setOpen({sym:symbol,tab:'chart'})}>Xem biểu đồ ↗</button></div><div className="info-banner">Phân tích chạy bằng pipeline QUANT thật trên backend. Kết quả mẫu chỉ dùng để trải nghiệm giao diện.</div><QuantPanel key={symbol} sym={symbol}/></section>}
+     {section==='quant'&&<section className="analysis-page"><div className="analysis-toolbar"><label htmlFor="analysis-symbol">Cổ phiếu cần phân tích</label><input id="analysis-symbol" value={symbol} onChange={e=>setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} placeholder="Nhập mã ·VD FPT" maxLength={5} style={{width:120}}/><button className="btn ghost" onClick={()=>symbol&&setOpen({sym:symbol,tab:'chart'})}>Xem biểu đồ ↗</button></div><div className="info-banner">Phân tích chạy bằng pipeline QUANT thật trên backend. Kết quả mẫu chỉ dùng để trải nghiệm giao diện.</div><QuantPanel key={symbol} sym={symbol}/></section>}
     {section==='guide'&&<div className="guide-grid">{[
       ['01','Đọc bảng giá','Giá hiển thị theo nghìn đồng, khối lượng theo cổ phiếu. Xanh là tăng, đỏ là giảm, vàng là tham chiếu, tím là trần và xanh lam là sàn.'],
       ['02','Tạo danh sách theo dõi','Bấm ngôi sao cạnh mã cổ phiếu rồi mở trang Theo dõi. Danh sách được lưu trên trình duyệt của bạn.'],

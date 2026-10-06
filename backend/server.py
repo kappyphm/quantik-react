@@ -256,7 +256,7 @@ def scan_detail(symbol: str):
 
 @app.get("/api/v1/market/overview")
 def market_overview(page: int = 1, page_size: int = 5):
-    if page < 1 or page_size not in (5, 10, 20):
+    if page < 1 or page_size not in (5, 10, 20, 50):
         raise HTTPException(422, "page/page_size không hợp lệ")
     try:
         return live_market_overview(page, page_size)

@@ -62,8 +62,8 @@ async function fetchScanItems(signal) {
  * 200 mã đầu, ghép điểm/nhóm ngành từ bản quét đã công bố. Ném lỗi khi chưa
  * có bản công bố để UI rơi về snapshot demo như cũ.
  */
-const BOARD_SYMBOLS = 200;
-const BOARD_PAGE_SIZE = 20;
+const BOARD_SYMBOLS = 500;
+const BOARD_PAGE_SIZE = 50;
 
 export const getBoard = async (group = 'ALL', signal) => {
   void group;

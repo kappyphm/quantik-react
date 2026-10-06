@@ -24,6 +24,34 @@ def _number(value):
     return number if math.isfinite(number) else None
 
 
+def _shares(value):
+    number = _number(value)
+    return int(number) if number is not None and number >= 0 else None
+
+
+def _money(value):
+    number = _number(value)
+    return number if number is not None and number >= 0 else None
+
+
+def _depth(row, side):
+    """Ba mức dư mua/bán [{price, volume}]; thiếu thì null từng ô."""
+    levels = []
+    for level in (1, 2, 3):
+        price = _number(row.get(f'{side}_price_{level}'))
+        levels.append({'price': price, 'volume': _shares(row.get(f'{side}_vol_{level}'))})
+    return levels
+
+
+def _empty_item(symbol):
+    return {'symbol': symbol, 'exchange': '—', 'price': None,
+            'change': None, 'change_pct': None, 'volume': None,
+            'reference': None, 'ceiling': None, 'floor': None,
+            'open': None, 'high': None, 'low': None, 'average': None,
+            'total_value': None, 'bids': _depth({}, ''), 'asks': _depth({}, ''),
+            'foreign_buy': None, 'foreign_sell': None, 'foreign_room': None}
+
+
 def _symbols():
     global _listing
     if time.monotonic() - _listing[0] < 6 * 3600 and _listing[1]:
@@ -67,8 +95,7 @@ def overview(page: int, page_size: int) -> dict:
             for symbol in page_symbols:
                 row = rows.get(symbol)
                 if row is None:
-                    items.append({'symbol': symbol, 'exchange': '—', 'price': None,
-                                  'change': None, 'change_pct': None, 'volume': None})
+                    items.append(_empty_item(symbol))
                     continue
                 price = _number(row.get('close_price'))
                 reference = _number(row.get('reference_price'))
@@ -76,15 +103,27 @@ def overview(page: int, page_size: int) -> dict:
                 exchange = str(row.get('exchange')).strip()
                 if exchange.casefold() in ('', 'nan', 'none', '<na>'):
                     exchange = '—'
+                item = {'symbol': symbol, 'exchange': exchange,
+                        'price': None, 'change': None, 'change_pct': None,
+                        'volume': _shares(volume),
+                        'reference': reference,
+                        'ceiling': _number(row.get('ceiling_price')),
+                        'floor': _number(row.get('floor_price')),
+                        'open': _number(row.get('open_price')),
+                        'high': _number(row.get('high_price')),
+                        'low': _number(row.get('low_price')),
+                        'average': _number(row.get('average_price')),
+                        'total_value': _money(row.get('total_value')),
+                        'bids': _depth(row, 'bid'), 'asks': _depth(row, 'ask'),
+                        'foreign_buy': _shares(row.get('foreign_buy_volume')),
+                        'foreign_sell': _shares(row.get('foreign_sell_volume')),
+                        'foreign_room': _shares(row.get('foreign_room'))}
                 if price is None or reference is None or price <= 0 or reference <= 0:
-                    items.append({'symbol': symbol, 'exchange': exchange,
-                                  'price': None, 'change': None, 'change_pct': None,
-                                  'volume': int(volume) if volume is not None and volume >= 0 else None})
+                    items.append(item)
                     continue
-                items.append({'symbol': symbol, 'exchange': exchange,
-                              'price': price, 'change': price - reference,
-                              'change_pct': (price / reference - 1) * 100,
-                              'volume': int(volume) if volume is not None and volume >= 0 else None})
+                item.update({'price': price, 'change': price - reference,
+                             'change_pct': (price / reference - 1) * 100})
+                items.append(item)
         index_bars = _index_bars()
         result = {'source': 'vnstock_price_board',
                   'as_of': datetime.now(timezone.utc).isoformat(timespec='seconds'),

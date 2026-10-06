@@ -44,7 +44,8 @@ export function normalizeLiveBoard(pages, scanBySymbol) {
       const scan = (scanBySymbol && scanBySymbol.get(symbol)) || {};
       const price = liveNum(item.price);
       const changePct = liveNum(item.change_pct);
-      const ref = price != null && changePct != null ? price / (1 + changePct / 100) : null;
+      const ref = liveNum(item.reference)
+        ?? (price != null && changePct != null ? price / (1 + changePct / 100) : null);
       const exchange = item.exchange && item.exchange !== '—' ? item.exchange : (scan.exchange || '—');
       const inst = {
         symbol, name: scan.name || symbol, exchange,
@@ -56,9 +57,16 @@ export function normalizeLiveBoard(pages, scanBySymbol) {
         insts.push(inst);
       }
       quotes.push({
-        symbol, ref, ceil: null, floor: null, price,
-        vol: item.volume == null ? null : Math.max(0, Math.trunc(Number(item.volume))) || null,
-        value: null, score: scan.score ?? null,
+        symbol, ref,
+        ceil: liveNum(item.ceiling), floor: liveNum(item.floor),
+        price, vol: item.volume == null ? null : Math.max(0, Math.trunc(Number(item.volume))) || null,
+        value: liveNum(item.total_value),
+        open: liveNum(item.open), high: liveNum(item.high), low: liveNum(item.low),
+        bids: (item.bids || []).map(level => ({price: liveNum(level.price), volume: liveNum(level.volume)})),
+        asks: (item.asks || []).map(level => ({price: liveNum(level.price), volume: liveNum(level.volume)})),
+        foreignBuy: liveNum(item.foreign_buy), foreignSell: liveNum(item.foreign_sell),
+        foreignRoom: liveNum(item.foreign_room),
+        score: scan.score ?? null,
       });
     }
   }
