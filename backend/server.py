@@ -18,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from scan_highlights import select_highlights
+from scan_presentation import enrich_saved_summary
 from runtime_env import load_project_env
 from store import (connect, create_scan, heartbeat_service, init_db, loads, new_job,
                    new_session, session_exists, now)
@@ -209,6 +211,19 @@ def scan_results(q: str = "", exchange: str | None = None, recommendation: str |
     return {**run_metadata(run),
             **query_results(run["id"], q, exchange, recommendation, gate_pass, sector,
                             score_min, score_max, sort, order, page, page_size)}
+
+
+@app.get("/api/v1/scans/latest/highlights")
+def scan_highlights(response: Response):
+    # Pin the publication once; all selected rows and detail metrics use that run.
+    with connect() as db:
+        run = latest_run(db)
+        saved = db.execute("SELECT summary_json,detail_json FROM scan_results WHERE run_id=?", (run["id"],)).fetchall()
+    rows = [enrich_saved_summary(loads(r["summary_json"], {}), loads(r["detail_json"], {})) for r in saved]
+    selected = select_highlights({'rows': rows})
+    response.headers['Cache-Control'] = 'no-store'
+    meta = {key: run[key] for key in ('id','slot','data_as_of','published_at','universe_count','model_version','source_version')}
+    return {**meta, **{k:v for k,v in selected.items() if k != 'rows'}, 'items': selected['rows']}
 
 
 @app.get("/api/v1/scans/latest/facets")

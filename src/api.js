@@ -2,6 +2,7 @@
 // Nối với backend thật (FastAPI /api/v1): session cookie, market overview,
 // scan đã công bố, job QUANT + báo cáo. Khi API chưa sẵn sàng, các hàm ném
 // lỗi để UI giữ snapshot/demo gần nhất và báo offline (logic cũ giữ nguyên).
+import {mapBackendResearch} from './research.js';
 import {normalizeScan, mapBackendScan} from './scan.js';
 import {normalizeLiveBoard} from './market.js';
 
@@ -10,14 +11,9 @@ const V1 = `${BASE}/v1`;
 
 async function j(res) {
   if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try {
-      const data = await res.json();
-      const detail = data?.detail;
-      const text = detail?.message ?? detail ?? null;
-      if (typeof text === 'string' && text) message = text;
-    } catch { /* giữ message mặc định */ }
-    throw new Error(message);
+    let detail;try{detail=(await res.json()).detail;}catch{}
+    const error=new Error(typeof detail==='string'?detail:typeof detail?.message==='string'?detail.message:`Dịch vụ báo lỗi HTTP ${res.status}.`);
+    error.status=res.status;throw error;
   }
   return res.json();
 }
@@ -52,33 +48,29 @@ async function fetchScanItems(signal) {
   const pages = Math.max(1, Math.ceil(total / 100));
   for (let page = 2; page <= pages; page++) {
     const data = await v1get(`/scans/latest/results?page=${page}&page_size=100`, signal);
+    if (data.run_id !== first.run_id) throw new Error('Bản quét vừa thay đổi; vui lòng tải lại.');
     items.push(...(data.items || []));
   }
   return items;
 }
 
-/**
- * Bảng điện: giá live theo trang (backend cache 60s, tối đa 20 mã/trang) cho
- * 200 mã đầu, ghép điểm/nhóm ngành từ bản quét đã công bố. Ném lỗi khi chưa
- * có bản công bố để UI rơi về snapshot demo như cũ.
- */
-const BOARD_SYMBOLS = 500;
+/** Full provider catalog; scan metadata is optional and never blocks the board. */
 const BOARD_PAGE_SIZE = 50;
-
 export const getBoard = async (group = 'ALL', signal) => {
   void group;
-  const scanItems = await fetchScanItems(signal);
-  const bySymbol = new Map(
-    scanItems.map(item => [String(item.symbol || '').toUpperCase(), item]),
-  );
+  const scanPromise = fetchScanItems(signal).catch(() => {
+    return []; // optional metadata; market request owns cancellation
+  });
   const first = await v1get(`/market/overview?page=1&page_size=${BOARD_PAGE_SIZE}`, signal);
-  const total = Math.min(first.total || 0, BOARD_SYMBOLS);
+  const total = first.total ?? first.items?.length ?? 0;
   const pages = [first];
-  const count = Math.max(1, Math.ceil(total / BOARD_PAGE_SIZE));
-  for (let page = 2; page <= count; page++) {
-    pages.push(await v1get(`/market/overview?page=${page}&page_size=${BOARD_PAGE_SIZE}`, signal));
+  for (let page = 2; page <= Math.ceil(total / BOARD_PAGE_SIZE); page++) {
+    const data = await v1get(`/market/overview?page=${page}&page_size=${BOARD_PAGE_SIZE}`, signal);
+    if (data.total !== first.total) throw new Error('Danh mục nguồn thay đổi; tải lại bảng điện.');
+    pages.push(data);
   }
-  return normalizeLiveBoard(pages, bySymbol);
+  const scanItems = await scanPromise;
+  return normalizeLiveBoard(pages, new Map(scanItems.map(item => [item.symbol, item])));
 };
 
 /**
@@ -97,6 +89,7 @@ export const startQuant = async (symbol, modules = null) => {
 };
 
 const numOrNull = value => {
+  if (value == null || value === '' || typeof value === 'boolean') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 };
@@ -109,16 +102,20 @@ function buildMetrics(report) {
   const dist = report.dist || {};
   const known = id => stats[id] ?? vol[id] ?? ac[id] ?? dist[id] ?? null;
   const metrics = [
-    {id: 'ensemble_return', value: report.fcast?.ensemble_ret_pct ?? null, unit: '%'},
-    {id: 'confidence', value: report.fcast?.agreement_pct ?? null, unit: '%'},
-    {id: 'hmm', value: report.hmm?.current ?? null},
-    {id: 'var', value: report.charts?.return_distribution?.var95 ?? null, unit: '%'},
-    {id: 'cvar', value: report.charts?.return_distribution?.cvar95 ?? null, unit: '%'},
+    {id:'ensemble_return',value:report.fcast?.ensemble_ret_pct,unit:'%'},
+    {id:'confidence',value:report.fcast?.agreement_pct,unit:'%'},
+    {id:'hmm',value:report.hmm?.current},
+    {id:'var',value:report.charts?.return_distribution?.var95,unit:'%'},
+    {id:'cvar',value:report.charts?.return_distribution?.cvar95,unit:'%'},
+    {id:'annual_return',value:stats.ann_return_pct,unit:'%'},
+    {id:'max_drawdown',value:stats.max_dd_pct,unit:'%'},
+    {id:'win_rate',value:stats.win_rate_pct,unit:'%',scope:'DAILY_PRICE_RETURNS_NOT_TRADES'},
+    {id:'volatility_regime',value:vol.regime},
+    {id:'lock_drawdown',value:report.fcast?.lock_risk?.max_dd_lock_pct,unit:'%'},
+    {id:'probability_loss',value:report.fcast?.lock_risk?.prob_loss_gt_3pct,unit:'%'},
   ];
-  for (const id of ['annual_return', 'sharpe', 'sortino', 'calmar', 'win_rate',
-    'max_drawdown', 'volatility_regime', 'cmf', 'rsi', 'kurtosis',
-    'lock_drawdown', 'probability_loss', 'kelly', 'risk_reward', 'entry_quality']) {
-    metrics.push({id, value: known(id)});
+  for (const id of ['sharpe','sortino','calmar','cmf','rsi','kurtosis','kelly','risk_reward','entry_quality']) {
+    metrics.push({id,value:known(id)});
   }
   return metrics.map(m => ({
     ...m,
@@ -148,7 +145,7 @@ export const getJob = async id => {
       state: status === 'done' ? 'done' : status === 'error' ? 'error' : 'running',
       sec: null,
     }],
-    summary: null, metrics: [], imageUrl: null,
+    summary: null, metrics: [], imageUrl: null, research: null,
   };
   if (status === 'done') {
     try {
@@ -166,12 +163,15 @@ export const getJob = async id => {
         net_r: null, atr_pct: null,
       };
       out.metrics = buildMetrics(report);
+      out.research = report.research || mapBackendResearch(report);
+      out.scoreComparable = report.score_comparable;
+      out.scoreComparabilityReason = report.score_comparability_reason;
       const manifest = report.chart_manifest || [];
       out.imageUrl = manifest.length ? manifest[0].url : null;
       if (report.commentary) {
         out.reportSections = [{id: 'commentary', title: 'Nhận định mô hình', text: report.commentary}];
       }
-    } catch { /* giữ job done tối thiểu khi báo cáo chưa đọc được */ }
+    } catch (error) { out.reportError = `Chưa tải được báo cáo: ${error.message}`; }
   }
   return out;
 };
@@ -197,3 +197,10 @@ export const getSymbolDetail = (symbol, signal) =>
 /** Nến OHLCV của 1 mã từ snapshot đã công bố (public, tối đa 260 phiên). */
 export const getSymbolOhlcv = (symbol, limit = 260, signal) =>
   v1get(`/scans/latest/results/${encodeURIComponent(String(symbol).toUpperCase())}/ohlcv?limit=${limit}`, signal);
+
+/** The server selects at most ten rows from one publication, without starting jobs. */
+export const getScanHighlights = async signal => {
+ const data = await v1get('/scans/latest/highlights', signal);
+ const mapped = mapBackendScan(data, data.items);
+ return normalizeScan({...mapped, highlights:data.highlights, eligibleCount:data.eligibleCount, excludedCount:data.excludedCount, analyzedCount:data.analyzedCount, buyNowCount:data.buyNowCount, selectionRuleVersion:data.selectionRuleVersion});
+};
