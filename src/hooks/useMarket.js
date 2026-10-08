@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
 import {getBoard} from '../api.js';
-import {demoSnapshot,normalizeSnapshot} from '../market.js';
+import {demoSnapshot,emptySnapshot,marketRows,normalizeSnapshot} from '../market.js';
 export default function useMarket(){
- const [snapshot,setSnapshot]=useState(demoSnapshot),[status,setStatus]=useState('connecting'),[lastSuccess,setLastSuccess]=useState(null),[flash,setFlash]=useState({});
+ const [snapshot,setSnapshot]=useState(emptySnapshot),[status,setStatus]=useState('connecting'),[lastSuccess,setLastSuccess]=useState(null),[flash,setFlash]=useState({});
  useEffect(()=>{
   let alive=true,controller,timer,previous={};
   const load=async()=>{
@@ -14,6 +14,6 @@ export default function useMarket(){
    if(alive)timer=setTimeout(load,60000);
   };load();return()=>{alive=false;controller?.abort();clearTimeout(timer);};
  },[]);
- const rows=snapshot.quotes.map(r=>({...r,...(snapshot.instruments.find(i=>i.symbol===r.symbol)||{name:r.symbol,sectorId:'unknown',exchange:'UNKNOWN'})}));
- return {snapshot,rows,status,lastSuccess,flash,isStale:snapshot.isStale||status==='offline'};
+ const rows=marketRows(snapshot);
+ return {snapshot,rows,status,lastSuccess,flash,isStale:snapshot.isStale||status==='offline',showDemo:()=>setSnapshot(normalizeSnapshot(demoSnapshot))};
 }

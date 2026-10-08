@@ -1,10 +1,13 @@
 import {useEffect,useRef,useState} from 'react';
 import BackendChart from './BackendChart.jsx';
 import QuantPanel from './QuantPanel.jsx';
+import useQuantJob from '../hooks/useQuantJob.js';
 import {getSymbolOhlcv} from '../api.js';
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const intervals=['D','W','M'];
 export default function ChartWorkspace({sym,theme,autoRun=false}) {
+ const {job,run}=useQuantJob(sym);
+ const running=['queued','running'].includes(job?.status);
   const [opened,setOpened]=useState(()=>autoRun||read('qt.drawer.open',true));
   const [width,setWidth]=useState(()=>Math.min(600,Math.max(320,Number(read('qt.drawer.width',380))||380)));
   const [height,setHeight]=useState(400),[dragging,setDragging]=useState(false);
@@ -29,7 +32,7 @@ export default function ChartWorkspace({sym,theme,autoRun=false}) {
  const down=e=>{e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);start.current={x:e.clientX,y:e.clientY,width,height,mobile:small()};setDragging(true);};
  const move=e=>{if(!start.current)return;const s=start.current;if(s.mobile)setHeight(Math.min(650,Math.max(250,s.height+s.y-e.clientY)));else changeWidth(s.width+s.x-e.clientX);};
  const end=()=>{start.current=null;setDragging(false);};
-  return <div className="chart-workspace"><div className="workspace-tools"><b className="workspace-label">Biểu đồ {sym}</b><label>Khung nến <select aria-label="Khung nến" value={interval} onChange={e=>setInterval(e.target.value)}>{[['D','Ngày'],['W','Tuần'],['M','Tháng']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><button className="btn ghost" aria-expanded={opened} onClick={()=>setOpened(x=>!x)}>{opened?'Thu gọn phân tích':'Mở phân tích'} ⌁</button></div>
+  return <div className="chart-workspace"><div className="workspace-tools"><b className="workspace-label">Biểu đồ {sym}</b><label>Khung nến <select aria-label="Khung nến" value={interval} onChange={e=>setInterval(e.target.value)}>{[['D','Ngày'],['W','Tuần'],['M','Tháng']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label><button className="btn workspace-quant-run" disabled={running} onClick={()=>{setOpened(true);run(sym,null);}}>{running?`Đang phân tích ${sym}…`:`Chạy Quant ${sym}`}</button><button className="btn ghost" aria-expanded={opened} onClick={()=>setOpened(x=>!x)}>{opened?'Thu gọn phân tích':'Mở phân tích'} ⌁</button></div>
   <p className="chart-source">Nến từ snapshot đã công bố của backend · Khớp đúng dữ liệu dùng để phân tích Quant.</p>
   <div ref={frame} className={`chart-split ${opened?'analysis-open':''} ${dragging?'resizing':''}`} style={{'--analysis-width':`${width}px`,'--analysis-height':`${height}px`}}>
   <section className="chart-main" aria-label={`Biểu đồ ${sym}`}><div className="workspace-chart" style={{padding: 12}}>{chartError ? <div className="empty"><b>Không tải được nến {sym}</b><p>{chartError}</p></div> : !bars ? <div className="empty"><p>Đang tải nến…</p></div> : !bars.length ? <div className="empty"><b>Mã {sym} chưa có OHLCV trong bản công bố</b></div> : <BackendChart symbol={sym} bars={bars} interval={interval} theme={theme}/>}</div></section>

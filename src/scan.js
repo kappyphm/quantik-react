@@ -1,4 +1,6 @@
 import demo from '../shared/scan-demo.json';
+import fields from '../shared/scan-fields.json';
+export const scanFields=fields;
 
 export function normalizeScan(data) {
   if (!data || !['demo','published'].includes(data.mode) ||
@@ -21,9 +23,54 @@ export function normalizeScan(data) {
         ['sector','recommendation','explanation','rating','indexTrend'].some(k=>row[k]!=null && typeof row[k]!=='string')) {
       throw new Error('Kết quả quét chưa đúng định dạng.');
     }
+    for(const field of fields){
+      const value=row[field.key];
+      if(value==null)continue;
+      if(['pct','price','number','billions'].includes(field.format)){
+        if(!Number.isFinite(value)||(field.format==='price'&&value<=0))throw new Error('Đơn vị hoặc giá trị chỉ số không hợp lệ.');
+      }else if(field.key==='gate_pass'){
+        if(typeof value!=='boolean')throw new Error('Gate không hợp lệ.');
+      }else if(typeof value!=='string'&&!( ['gate_reasons','data_quality_flags'].includes(field.key)&&Array.isArray(value)&&value.every(v=>typeof v==='string'))){
+        throw new Error('Nhãn hoặc lý do đánh giá không hợp lệ.');
+      }
+    }
     symbols.add(row.symbol);
   }
+  if(data.highlights){
+    const a=data.highlights.opportunities,b=data.highlights.cautions;
+    if(!Array.isArray(a)||!Array.isArray(b)||a.length>5||b.length>5||new Set([...a,...b]).size!==a.length+b.length||[...a,...b].some(s=>!symbols.has(s)))throw new Error('Bản highlights không hợp lệ.');
+  }
   return {...data, isStale: Date.now()-Date.parse(data.publishedAt) > data.cadenceMinutes*60000};
+}
+
+export function actionKind(row){
+ const text=searchKey(row.action||row.recommendation||'').toUpperCase().trim();
+ return ['AVOID','TRANH','BAN','SELL'].includes(text)?'AVOID':['BUY_NOW','MUA NGAY','MUA'].includes(text)?'BUY_NOW':['BUY_SETUP','BUY','CANH MUA'].includes(text)?'BUY_SETUP':text.includes('WATCH')||text.includes('THEO DOI')?'WATCH':'UNKNOWN';
+}
+export function selectHighlights(snapshot){
+ const rows=snapshot?.rows||[];
+ if(snapshot?.highlights){const map=new Map(rows.map(r=>[r.symbol,r]));return {opportunities:snapshot.highlights.opportunities.map(s=>map.get(s)),cautions:snapshot.highlights.cautions.map(s=>map.get(s)),eligibleCount:snapshot.eligibleCount,excludedCount:snapshot.excludedCount,buyNowCount:snapshot.buyNowCount};}
+ const eligible=rows.filter(r=>Number.isFinite(r.score)&&!['FAIL','FAILED','ERROR'].includes(String(r.data_quality_status||'').toUpperCase())&&!['failed','error'].includes(String(r.analysis_status||'').toLowerCase()));
+ const priority={BUY_NOW:0,BUY_SETUP:1,WATCH:2,UNKNOWN:3};
+ const rank=r=>['BUY_NOW','BUY_SETUP'].includes(actionKind(r))&&(r.gate_pass??r.passed)!==true?3:priority[actionKind(r)];
+ const opportunities=eligible.filter(r=>actionKind(r)!=='AVOID').sort((a,b)=>(rank(a)-rank(b))||b.score-a.score||a.symbol.localeCompare(b.symbol)).slice(0,5);
+ const picked=new Set(opportunities.map(r=>r.symbol));
+ const cautions=eligible.filter(r=>!picked.has(r.symbol)).sort((a,b)=>(actionKind(a)==='AVOID'?0:1)-(actionKind(b)==='AVOID'?0:1)||a.score-b.score||a.symbol.localeCompare(b.symbol)).slice(0,5);
+ return {opportunities,cautions,eligibleCount:eligible.length,excludedCount:rows.length-eligible.length,buyNowCount:eligible.filter(r=>actionKind(r)==='BUY_NOW'&&(r.gate_pass??r.passed)===true).length};
+}
+export function scanValue(row,key){
+ const aliases={action:'recommendation',gate_pass:'passed',gate_reasons:'explanation',holding_sessions:'holdingSessions',index_trend:'indexTrend'};
+ return row[key]??row[aliases[key]]??null;
+}
+export function formatScanValue(row,field){
+ const value=scanValue(row,field.key);
+ if(value==null||value==='')return '—';
+ if(field.key==='action'&&['BUY_NOW','BUY_SETUP'].includes(actionKind(row))&&scanValue(row,'gate_pass')!==true)return `${value} · gate chưa xác nhận`;
+ if(typeof value==='boolean')return value?'✓ Đã đạt':'Chưa đạt';
+ if(Array.isArray(value))return value.join(' · ')||'—';
+ if(typeof value!=='number')return String(value);
+ const n=field.format==='price'?value/1000:field.format==='billions'?value/1e9:value;
+ return n.toLocaleString('vi-VN',{maximumFractionDigits:2})+(field.format==='pct'?'%':'');
 }
 
 export const demoScan = () => normalizeScan(demo);
@@ -34,6 +81,7 @@ const holdingSessions = value => {
 };
 
 const validScore = value => {
+  if(value==null||value===''||typeof value==='boolean')return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.min(100, Math.max(0, n));
@@ -53,11 +101,12 @@ export function mapBackendScan(meta, items) {
     seen.add(symbol);
     const completed = item.analysis_status === 'completed';
     rows.push({
+      ...item,
       symbol,
       name: item.name || symbol,
       exchange: item.exchange || '—',
       score: completed ? validScore(item.score) : null,
-      passed: completed ? !!item.gate_pass : null,
+      passed: completed ? (typeof item.gate_pass==='boolean'?item.gate_pass:null) : null,
       holdingSessions: completed ? holdingSessions(item.hold_plan) : null,
       recommendation: completed ? (item.recommendation || null) : null,
       explanation: item.gate_explanation || null,

@@ -1,0 +1,482 @@
+{
+  "schemaVersion": 1,
+  "symbol": "DEMO",
+  "mode": "demo",
+  "asOf": "2026-10-02T08:00:00Z",
+  "units": {
+    "price": "VND",
+    "return": "pct"
+  },
+  "horizonSessions": 10,
+  "simulationCount": null,
+  "source": "Fixture giao diện cố định — không chạy mô hình",
+  "cone": [
+    {
+      "session": 0,
+      "p05": 1.0,
+      "p25": 1.0,
+      "p50": 1.0,
+      "p75": 1.0,
+      "p95": 1.0
+    },
+    {
+      "session": 1,
+      "p05": 0.983,
+      "p25": 0.993,
+      "p50": 1.002,
+      "p75": 1.011,
+      "p95": 1.021
+    },
+    {
+      "session": 2,
+      "p05": 0.9771299423149112,
+      "p25": 0.9912720779386421,
+      "p50": 1.004,
+      "p75": 1.0167279220613579,
+      "p95": 1.0308700576850889
+    },
+    {
+      "session": 3,
+      "p05": 0.9730910346561913,
+      "p25": 0.9904115427318801,
+      "p50": 1.006,
+      "p75": 1.02158845726812,
+      "p95": 1.0389089653438086
+    },
+    {
+      "session": 4,
+      "p05": 0.97,
+      "p25": 0.99,
+      "p50": 1.008,
+      "p75": 1.026,
+      "p95": 1.046
+    },
+    {
+      "session": 5,
+      "p05": 0.967514708427504,
+      "p25": 0.9898753882025019,
+      "p50": 1.01,
+      "p75": 1.030124611797498,
+      "p95": 1.052485291572496
+    },
+    {
+      "session": 6,
+      "p05": 0.9654596948871197,
+      "p25": 0.9899545923149514,
+      "p50": 1.012,
+      "p75": 1.0340454076850487,
+      "p95": 1.0585403051128803
+    },
+    {
+      "session": 7,
+      "p05": 0.9637307250897728,
+      "p25": 0.9901882382004187,
+      "p50": 1.014,
+      "p75": 1.0378117617995812,
+      "p95": 1.0642692749102272
+    },
+    {
+      "session": 8,
+      "p05": 0.9622598846298224,
+      "p25": 0.9905441558772843,
+      "p50": 1.016,
+      "p75": 1.0414558441227157,
+      "p95": 1.0697401153701775
+    },
+    {
+      "session": 9,
+      "p05": 0.9610000000000001,
+      "p25": 0.991,
+      "p50": 1.018,
+      "p75": 1.045,
+      "p95": 1.075
+    },
+    {
+      "session": 10,
+      "p05": 0.9599167244568008,
+      "p25": 0.9915395010584847,
+      "p50": 1.02,
+      "p75": 1.0484604989415154,
+      "p95": 1.0800832755431993
+    }
+  ],
+  "distribution": [
+    {
+      "returnPct": -12,
+      "probabilityPct": 2
+    },
+    {
+      "returnPct": -9,
+      "probabilityPct": 4
+    },
+    {
+      "returnPct": -6,
+      "probabilityPct": 8
+    },
+    {
+      "returnPct": -3,
+      "probabilityPct": 10
+    },
+    {
+      "returnPct": 0,
+      "probabilityPct": 18
+    },
+    {
+      "returnPct": 3,
+      "probabilityPct": 23
+    },
+    {
+      "returnPct": 6,
+      "probabilityPct": 18
+    },
+    {
+      "returnPct": 9,
+      "probabilityPct": 11
+    },
+    {
+      "returnPct": 12,
+      "probabilityPct": 6
+    }
+  ],
+  "regime": [
+    {
+      "date": "Phiên 1",
+      "price": 1,
+      "state": "Bear",
+      "probabilities": {
+        "bull": 0.35,
+        "bear": 0.4,
+        "sideways": 0.25
+      }
+    },
+    {
+      "date": "Phiên 2",
+      "price": 0.98,
+      "state": "Bear",
+      "probabilities": {
+        "bull": 0.37,
+        "bear": 0.385,
+        "sideways": 0.245
+      }
+    },
+    {
+      "date": "Phiên 3",
+      "price": 0.96,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.38999999999999996,
+        "bear": 0.37,
+        "sideways": 0.2400000000000001
+      }
+    },
+    {
+      "date": "Phiên 4",
+      "price": 0.99,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.41,
+        "bear": 0.35500000000000004,
+        "sideways": 0.23500000000000004
+      }
+    },
+    {
+      "date": "Phiên 5",
+      "price": 1.02,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.43,
+        "bear": 0.34,
+        "sideways": 0.23000000000000004
+      }
+    },
+    {
+      "date": "Phiên 6",
+      "price": 1.04,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.44999999999999996,
+        "bear": 0.325,
+        "sideways": 0.22500000000000003
+      }
+    },
+    {
+      "date": "Phiên 7",
+      "price": 1.01,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.47,
+        "bear": 0.31000000000000005,
+        "sideways": 0.21999999999999997
+      }
+    },
+    {
+      "date": "Phiên 8",
+      "price": 1.03,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.49,
+        "bear": 0.29500000000000004,
+        "sideways": 0.21499999999999997
+      }
+    },
+    {
+      "date": "Phiên 9",
+      "price": 1.06,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.51,
+        "bear": 0.28,
+        "sideways": 0.20999999999999996
+      }
+    },
+    {
+      "date": "Phiên 10",
+      "price": 1.05,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.53,
+        "bear": 0.265,
+        "sideways": 0.20499999999999996
+      }
+    },
+    {
+      "date": "Phiên 11",
+      "price": 1.02,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.55,
+        "bear": 0.25,
+        "sideways": 0.19999999999999996
+      }
+    },
+    {
+      "date": "Phiên 12",
+      "price": 1.04,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.57,
+        "bear": 0.23500000000000004,
+        "sideways": 0.195
+      }
+    },
+    {
+      "date": "Phiên 13",
+      "price": 1.07,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.59,
+        "bear": 0.22000000000000003,
+        "sideways": 0.19
+      }
+    },
+    {
+      "date": "Phiên 14",
+      "price": 1.06,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.61,
+        "bear": 0.20500000000000002,
+        "sideways": 0.185
+      }
+    },
+    {
+      "date": "Phiên 15",
+      "price": 1.08,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.63,
+        "bear": 0.19000000000000003,
+        "sideways": 0.17999999999999997
+      }
+    },
+    {
+      "date": "Phiên 16",
+      "price": 1.09,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.6499999999999999,
+        "bear": 0.17500000000000004,
+        "sideways": 0.17500000000000004
+      }
+    },
+    {
+      "date": "Phiên 17",
+      "price": 1.07,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.6699999999999999,
+        "bear": 0.16000000000000003,
+        "sideways": 0.17000000000000004
+      }
+    },
+    {
+      "date": "Phiên 18",
+      "price": 1.1,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.69,
+        "bear": 0.14500000000000002,
+        "sideways": 0.16500000000000004
+      }
+    },
+    {
+      "date": "Phiên 19",
+      "price": 1.08,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.71,
+        "bear": 0.13,
+        "sideways": 0.16000000000000003
+      }
+    },
+    {
+      "date": "Phiên 20",
+      "price": 1.12,
+      "state": "Bull",
+      "probabilities": {
+        "bull": 0.73,
+        "bear": 0.11500000000000005,
+        "sideways": 0.15499999999999997
+      }
+    }
+  ],
+  "drawdown": [
+    {
+      "date": "Phiên 1",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 2",
+      "valuePct": -2.0
+    },
+    {
+      "date": "Phiên 3",
+      "valuePct": -4.0
+    },
+    {
+      "date": "Phiên 4",
+      "valuePct": -1.0
+    },
+    {
+      "date": "Phiên 5",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 6",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 7",
+      "valuePct": -2.885
+    },
+    {
+      "date": "Phiên 8",
+      "valuePct": -0.962
+    },
+    {
+      "date": "Phiên 9",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 10",
+      "valuePct": -0.943
+    },
+    {
+      "date": "Phiên 11",
+      "valuePct": -3.774
+    },
+    {
+      "date": "Phiên 12",
+      "valuePct": -1.887
+    },
+    {
+      "date": "Phiên 13",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 14",
+      "valuePct": -0.935
+    },
+    {
+      "date": "Phiên 15",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 16",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 17",
+      "valuePct": -1.835
+    },
+    {
+      "date": "Phiên 18",
+      "valuePct": 0.0
+    },
+    {
+      "date": "Phiên 19",
+      "valuePct": -1.818
+    },
+    {
+      "date": "Phiên 20",
+      "valuePct": 0.0
+    }
+  ],
+  "factors": [
+    {
+      "id": "trend",
+      "label": "Xu hướng",
+      "value": 72,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "momentum",
+      "label": "Động lượng",
+      "value": 58,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "flow",
+      "label": "Dòng tiền",
+      "value": 65,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "relative",
+      "label": "Sức mạnh tương đối",
+      "value": 61,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "id": "risk",
+      "label": "Kiểm soát rủi ro",
+      "value": 47,
+      "min": 0,
+      "max": 100
+    }
+  ],
+  "riskMetrics": [
+    {
+      "id": "var",
+      "label": "VaR 95%",
+      "value": 6.2,
+      "unit": "%"
+    },
+    {
+      "id": "cvar",
+      "label": "CVaR 95%",
+      "value": 9.1,
+      "unit": "%"
+    },
+    {
+      "id": "probability_loss",
+      "label": "P(lỗ > 3%)",
+      "value": 24,
+      "unit": "%"
+    }
+  ]
+}
