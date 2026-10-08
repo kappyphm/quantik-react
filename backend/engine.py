@@ -10,6 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from quant_service import present_report
+from scan_presentation import fields_from_summary
 
 
 def clean(value):
@@ -263,6 +264,8 @@ def scan_all(progress, symbols=None, checkpoint_dir: Path | None = None, univers
             "sector_trend": display.get("Xu hướng ngành"),
             "analysis_status": status,
         }
+        if status == 'completed':
+            summary.update(fields_from_summary(row, report))
         detail = {**summary, "raw_action": action, "screener": screening.get(symbol, {}),
                   "quant": clean(report) if report else {}, "commentary": row.get("Analysis") or "",
                   "error": error, "listing_status": "listed",

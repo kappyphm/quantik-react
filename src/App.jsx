@@ -37,15 +37,15 @@ export default function App() {
     <main id="main"><div className="page-heading"><div><span className="eyebrow">VIETNAM EQUITIES / QUANTIK</span><h1>{title==='Thị trường'?'Toàn cảnh thị trường':title}</h1><p>{subtitle}</p></div><div className="session-time"><b>{clock.toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</b><span>{clock.toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})} ICT</span></div></div>
     <form className="command-line" onSubmit={execute}><label htmlFor="command">⌕ <span>Tra cứu nhanh</span></label><input ref={input} id="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="Nhập mã cổ phiếu · FPT hoặc FPT Q" autoComplete="off" spellCheck="false"/><kbd>/</kbd><button type="submit">Mở ↗</button></form>{notice&&<p role="status" className="err">{notice}</p>}
     {(['market','watch','board','sectors'].includes(section))&&<PriceBoard section={section} onOpen={sym=>setOpen({sym,tab:'overview'})} onQuant={sym=>setOpen({sym,tab:'quant'})}/>}
-    <div hidden={section!=='scan'}><ScanPage onOpen={sym=>setOpen({sym,tab:'overview'})}/></div>
+    <div hidden={section!=='scan'}><ScanPage onOpen={(sym,scan)=>setOpen({sym,tab:'overview',scan})} onQuant={(sym,scan)=>setOpen({sym,tab:'quant',scan})}/></div>
      {section==='quant'&&<section className="analysis-page"><div className="analysis-toolbar"><label htmlFor="analysis-symbol">Cổ phiếu cần phân tích</label><input id="analysis-symbol" value={symbol} onChange={e=>setSymbol(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} placeholder="Nhập mã ·VD FPT" maxLength={5} style={{width:120}}/><button className="btn ghost" onClick={()=>symbol&&setOpen({sym:symbol,tab:'chart'})}>Xem biểu đồ ↗</button></div><div className="info-banner">Phân tích chạy bằng pipeline QUANT thật trên backend. Kết quả mẫu chỉ dùng để trải nghiệm giao diện.</div><QuantPanel key={symbol} sym={symbol}/></section>}
     {section==='guide'&&<div className="guide-grid">{[
       ['01','Đọc bảng giá','Giá hiển thị theo nghìn đồng, khối lượng theo cổ phiếu. Xanh là tăng, đỏ là giảm, vàng là tham chiếu, tím là trần và xanh lam là sàn.'],
       ['02','Tạo danh sách theo dõi','Bấm ngôi sao cạnh mã cổ phiếu rồi mở trang Theo dõi. Danh sách được lưu trên trình duyệt của bạn.'],
       ['03','Khám phá một cổ phiếu','Chọn dòng để xem chi tiết phía dưới. Bấm đúp, nhấn Enter hoặc chọn Xem biểu đồ để mở cửa sổ phân tích.'],
       ['04','Chạy phân tích Quant','Mở panel cạnh chart, kéo mép để thay đổi kích thước. Bấm từng mục báo cáo để mở/thu gọn. Rê vào thuật ngữ gạch chân để xem giải thích và công thức.']
-    ].map(([n,t,p])=><article className="guide-card" key={n}><span>{n}</span><h2>{t}</h2><p>{p}</p></article>)}<div className="info-banner">Bảng giá lấy từ backend theo phiên đã công bố. Biểu đồ TradingView sử dụng nguồn riêng và cần kết nối Internet.</div></div>}
+    ].map(([n,t,p])=><article className="guide-card" key={n}><span>{n}</span><h2>{t}</h2><p>{p}</p></article>)}<div className="info-banner">Bảng giá lấy từ nguồn backend. Nến phân tích lấy từ bản quét đã công bố.</div></div>}
     <footer className="page-footer"><span>© {clock.getFullYear()} QuanTik · Quantitative insights</span><span>Dữ liệu theo phiên công bố · Không phải khuyến nghị đầu tư</span></footer></main></div>
-    {open&&<StockModal key={open.sym} sym={open.sym} initialTab={open.tab} theme={theme} onClose={()=>setOpen(null)}/>}
+    {open&&<StockModal key={open.sym} sym={open.sym} initialTab={open.tab} scan={open.scan} theme={theme} onClose={()=>setOpen(null)}/>}
   </div>;
 }

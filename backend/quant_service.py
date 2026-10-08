@@ -64,8 +64,8 @@ def present_report(report: dict, prices) -> dict:
     if paths is not None:
         paths = np.asarray(paths, dtype=float)
         if paths.ndim == 2 and paths.shape[1] > 1 and np.isfinite(paths).all():
-            quantiles = np.percentile(paths, [10, 25, 50, 75, 90], axis=0)
-            cone = {f'p{q}': _series(quantiles[i]) for i, q in enumerate((10, 25, 50, 75, 90))}
+            quantiles = np.percentile(paths, [5, 10, 25, 50, 75, 90, 95], axis=0)
+            cone = {f'p{q}': _series(quantiles[i]) for i, q in enumerate((5, 10, 25, 50, 75, 90, 95))}
             returns = paths[:, -1] / float(close.iloc[-1]) * 100 - 100
             edges = np.histogram_bin_edges(returns, bins='fd')
             counts, edges = np.histogram(returns, bins=edges)
@@ -80,7 +80,35 @@ def present_report(report: dict, prices) -> dict:
     price_by_date = dict(zip(dates, _series(close)))
     regime = [{'date': day, 'close': price_by_date[day], 'state': state}
               for day, state in zip(state_dates, state_labels) if day in price_by_date]
+    # Export small aggregates from the exact run; never ship raw MC paths.
+    distribution = []
+    if histogram and sum(histogram['counts']):
+        count = sum(histogram['counts'])
+        distribution = [{'returnPct': (histogram['edges'][i]+histogram['edges'][i+1])/2,
+                         'probabilityPct': n/count*100} for i,n in enumerate(histogram['counts'])]
+    factors = [{'id': key, 'label': key, 'value': val.get('z'), 'min': -1, 'max': 1}
+               for key,val in (report.get('rec', {}).get('factor_details') or {}).items()
+               if isinstance(val,dict) and _number(val.get('z')) is not None]
+    risk_values = [('var','VaR95',histogram.get('var95') if histogram else None),
+                   ('cvar','CVaR95',histogram.get('cvar95') if histogram else None),
+                   ('lock_drawdown','Drawdown T-lock',fcast.get('lock_risk', {}).get('max_dd_lock_pct')),
+                   ('probability_loss','P(lỗ > 3%)',fcast.get('lock_risk', {}).get('prob_loss_gt_3pct'))]
+    research = {
+        'schemaVersion': 1, 'symbol': symbol, 'mode': 'eod', 'asOf': dates[-1],
+        'source': 'QUANT · OHLCV của phiên phân tích', 'units': {'price':'VND','return':'pct'},
+        'horizonSessions': fcast.get('horizon'),
+        'simulationCount': int(paths.shape[0]) if cone else None,
+        'cone': [{'session':i, **{f'p{q:02}':cone[f'p{q}'][i] for q in (5,25,50,75,95)}}
+                 for i in range(len(cone['p50']))] if cone else [],
+        'distribution': distribution,
+        # Core preserves hard labels only. Do not invent historical posterior probabilities.
+        'regime': [{'date':p['date'],'price':p['close'],'state':p['state'],'probabilities':None} for p in regime],
+        'drawdown': [{'date':d,'valuePct':v} for d,v in zip(dates,_series(drawdown))],
+        'factors': factors,
+        'riskMetrics': [{'id':key,'label':label,'value':value,'unit':'%'} for key,label,value in risk_values if _number(value) is not None],
+    }
     return _json({
+        'research': research,
         'symbol': symbol, 'as_of': dates[-1],
         'score': report.get('rec', {}).get('score'),
         'rating': report.get('rec', {}).get('rating'),

@@ -131,3 +131,10 @@ Kiểm tra frontend: `pnpm build`. Kiểm tra API/queue: `cd backend && .venv\Sc
 
 Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy build frontend, toàn bộ unittest backend và `docker compose config` trên mọi push vào `main`/`codex/**` và mọi pull request vào `main`. Nhánh triển khai đi qua `codex/live-data`; chỉ gộp vào `main` sau khi lượt quét thật, kiểm thử giao diện và các job CI đều đạt.
 
+
+
+## Khôi phục nâng cấp giao diện trên fork (08/10/2026)
+
+Quét toàn sàn hiển thị tối đa 5 mã nổi bật và 5 mã thận trọng, lấy cùng lần công bố từ `/api/v1/scans/latest/highlights`. Chạy Quant cạnh ticker hoặc cạnh chart dùng controller chung; mở chart thường không tạo job. Tooltip có lý thuyết, công thức, ví dụ, điều kiện/ngưỡng và cách dùng. Bảng điện đọc đủ danh mục nguồn, bật sẵn book/thống kê/khối ngoại và render theo cửa sổ cho danh sách lớn.
+
+Backend, SQLite, worker/scheduler, session và chart OHLCV của `main` được giữ lại. Sáu visual đọc aggregate từ pipeline thật; dữ liệu thiếu giữ trạng thái trống, mẫu chỉ xuất hiện khi chọn xem mẫu. Xem [phạm vi và kiểm tra](docs/PRODUCT_UPGRADE_IMPLEMENTATION.md). Chạy `pnpm test`, `pnpm build` và `python -m unittest discover -s backend/tests -v` để kiểm tra.

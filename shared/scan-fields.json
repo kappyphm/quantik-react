@@ -1,0 +1,352 @@
+[
+  {
+    "key": "symbol",
+    "label": "Mã",
+    "format": "text",
+    "term": "symbol",
+    "note": "Symbol"
+  },
+  {
+    "key": "action",
+    "label": "Khuyến nghị",
+    "format": "text",
+    "term": "action",
+    "note": "Action / final_action; lưu raw enum và nhãn riêng"
+  },
+  {
+    "key": "gate_pass",
+    "label": "Đạt bộ lọc",
+    "format": "text",
+    "term": "gate_pass",
+    "note": "GatePass"
+  },
+  {
+    "key": "gate_reasons",
+    "label": "Giải thích điều kiện",
+    "format": "text",
+    "term": "gate_reasons",
+    "note": "GateReasons; reason codes + diễn giải"
+  },
+  {
+    "key": "score",
+    "label": "Điểm",
+    "format": "number",
+    "term": "quant_score",
+    "note": "Score; score_scope/model version"
+  },
+  {
+    "key": "rating",
+    "label": "Đánh giá",
+    "format": "text",
+    "term": "rating",
+    "note": "Rating; không thay action"
+  },
+  {
+    "key": "holding_sessions",
+    "label": "Thời gian nắm giữ",
+    "format": "number",
+    "term": "holding_sessions",
+    "note": "HoldPlan để hiển thị; lấy horizon số từ report"
+  },
+  {
+    "key": "index_trend",
+    "label": "Xu hướng VN-Index",
+    "format": "text",
+    "term": "index_trend",
+    "note": "VNI"
+  },
+  {
+    "key": "sector",
+    "label": "Nhóm ngành",
+    "format": "text",
+    "term": "sector",
+    "note": "NhomNganh"
+  },
+  {
+    "key": "sector_trend",
+    "label": "Xu hướng ngành",
+    "format": "text",
+    "term": "sector_trend",
+    "note": "XuHuongNganh"
+  },
+  {
+    "key": "sector_return_20d_pct",
+    "label": "Lợi nhuận ngành 20 phiên (%)",
+    "format": "pct",
+    "term": "sector_return_20d_pct",
+    "note": "NganhRet20D%"
+  },
+  {
+    "key": "sector_correlation",
+    "label": "Tương quan ngành",
+    "format": "number",
+    "term": "sector_correlation",
+    "note": "TuongQuanNganh; [-1,1], không tự nhân 100"
+  },
+  {
+    "key": "sector_lead_lag",
+    "label": "Mã dẫn dắt ngành",
+    "format": "text",
+    "term": "sector_lead_lag",
+    "note": "MaDanDatNganh; quan hệ lead/lag, không xác nhận nhân quả"
+  },
+  {
+    "key": "sharpe",
+    "label": "Sharpe",
+    "format": "number",
+    "term": "sharpe",
+    "note": "Sharpe; scope giá cổ phiếu"
+  },
+  {
+    "key": "up_day_ratio_pct",
+    "label": "Tỷ lệ phiên tăng (%)",
+    "format": "pct",
+    "term": "up_day_ratio",
+    "note": "WinRate hiện là phiên tăng; đổi nhãn UI"
+  },
+  {
+    "key": "max_drawdown_pct",
+    "label": "Max DD (%)",
+    "format": "pct",
+    "term": "max_drawdown",
+    "note": "MaxDD; historical window"
+  },
+  {
+    "key": "annual_return_pct",
+    "label": "Annual Return (%)",
+    "format": "pct",
+    "term": "annual_return",
+    "note": "AnnRet; lịch sử năm hóa"
+  },
+  {
+    "key": "hmm_regime",
+    "label": "HMM",
+    "format": "text",
+    "term": "hmm",
+    "note": "HMM"
+  },
+  {
+    "key": "volatility_regime",
+    "label": "Volatility Regime",
+    "format": "text",
+    "term": "volatility_regime",
+    "note": "VolReg"
+  },
+  {
+    "key": "forecast_direction",
+    "label": "Dự báo",
+    "format": "text",
+    "term": "forecast_direction",
+    "note": "Forecast"
+  },
+  {
+    "key": "ensemble_return_pct",
+    "label": "Lợi nhuận dự báo (%)",
+    "format": "pct",
+    "term": "ensemble_return",
+    "note": "EnsRet%; horizon cụ thể"
+  },
+  {
+    "key": "agreement_pct",
+    "label": "Đồng thuận (%)",
+    "format": "pct",
+    "term": "confidence",
+    "note": "Agreement"
+  },
+  {
+    "key": "model_coverage_pct",
+    "label": "Coverage mô hình (%)",
+    "format": "pct",
+    "term": "model_coverage",
+    "note": "Coverage%"
+  },
+  {
+    "key": "directional_support_pct",
+    "label": "Directional support (%)",
+    "format": "pct",
+    "term": "directional_support_pct",
+    "note": "AlphaSupport%"
+  },
+  {
+    "key": "active_model_count",
+    "label": "Số mô hình hoạt động",
+    "format": "number",
+    "term": "active_model_count",
+    "note": "ActiveModels; integer"
+  },
+  {
+    "key": "meta_trust_pct",
+    "label": "Meta trust (%)",
+    "format": "pct",
+    "term": "meta_trust_pct",
+    "note": "MetaTrust%; tên core là meta_trust_probability, cần kiểm chứng target và calibration trước khi gọi P(win)"
+  },
+  {
+    "key": "hurst",
+    "label": "Hurst",
+    "format": "number",
+    "term": "hurst",
+    "note": "Hurst"
+  },
+  {
+    "key": "hurst_regime",
+    "label": "Hurst regime",
+    "format": "text",
+    "term": "hurst_regime",
+    "note": "HurstRegime"
+  },
+  {
+    "key": "lightgbm_rank_pct",
+    "label": "LightGBM rank (%)",
+    "format": "pct",
+    "term": "lightgbm_rank_pct",
+    "note": "LightGBMRank%; percentile trong tập xếp hạng"
+  },
+  {
+    "key": "lightgbm_alpha_pct",
+    "label": "LightGBM alpha (%)",
+    "format": "pct",
+    "term": "lightgbm_alpha_pct",
+    "note": "LightGBMAlpha%; kiểm tra target/horizon/benchmark"
+  },
+  {
+    "key": "gross_forecast_pct",
+    "label": "Lợi nhuận gộp (%)",
+    "format": "pct",
+    "term": "gross_forecast_pct",
+    "note": "GrossFc%"
+  },
+  {
+    "key": "roundtrip_cost_pct",
+    "label": "Chi phí (%)",
+    "format": "pct",
+    "term": "roundtrip_cost_pct",
+    "note": "CostRT%; mô hình chi phí, không phải phí đã khớp"
+  },
+  {
+    "key": "net_forecast_pct",
+    "label": "Lợi nhuận ròng (%)",
+    "format": "pct",
+    "term": "net_forecast",
+    "note": "NetFc%"
+  },
+  {
+    "key": "mc_volatility_source",
+    "label": "Nguồn biến động mô phỏng",
+    "format": "text",
+    "term": "mc_volatility_source",
+    "note": "MCVol thực là nhãn mô hình/nguồn, không phải con số volatility"
+  },
+  {
+    "key": "lock_drawdown_pct",
+    "label": "Sụt giảm khi chờ T+2 (%)",
+    "format": "pct",
+    "term": "lock_drawdown",
+    "note": "LockDD%; kèm lock_sessions thật"
+  },
+  {
+    "key": "probability_loss_gt_3pct",
+    "label": "Xác suất lỗ trên 3% (%)",
+    "format": "pct",
+    "term": "probability_loss",
+    "note": "PLoss3%; phải mang horizon và sample count"
+  },
+  {
+    "key": "data_quality_status",
+    "label": "Chất lượng dữ liệu",
+    "format": "text",
+    "term": "data_quality_status",
+    "note": "DQStatus"
+  },
+  {
+    "key": "data_quality_score",
+    "label": "Điểm dữ liệu",
+    "format": "number",
+    "term": "data_quality_score",
+    "note": "DQScore"
+  },
+  {
+    "key": "data_quality_flags",
+    "label": "Cảnh báo dữ liệu",
+    "format": "text",
+    "term": "data_quality_flags",
+    "note": "DQFlags; array reason codes"
+  },
+  {
+    "key": "liquidity_tier",
+    "label": "Thanh khoản",
+    "format": "text",
+    "term": "liquidity_tier",
+    "note": "LiqTier"
+  },
+  {
+    "key": "adv20_value_vnd",
+    "label": "GTGD TB 20 phiên (tỷ)",
+    "format": "billions",
+    "term": "adv20_value_vnd",
+    "note": "Nguồn gốc liquidity.adv20_value_vnd; ADV20_Bn = /1e9"
+  },
+  {
+    "key": "capacity_shares",
+    "label": "Sức chứa tối đa (cổ phiếu)",
+    "format": "number",
+    "term": "capacity_shares",
+    "note": "CapacityShares"
+  },
+  {
+    "key": "gap_abs_p95_pct",
+    "label": "Khoảng trống giá 95% (%)",
+    "format": "pct",
+    "term": "gap_abs_p95_pct",
+    "note": "GapP95%"
+  },
+  {
+    "key": "entry_vnd",
+    "label": "Entry",
+    "format": "price",
+    "term": "entry",
+    "note": "Entry; Excel đã chia 1000"
+  },
+  {
+    "key": "stop_loss_vnd",
+    "label": "SL",
+    "format": "price",
+    "term": "stop_loss",
+    "note": "SL; Excel đã chia 1000"
+  },
+  {
+    "key": "take_profit_1_vnd",
+    "label": "TP1",
+    "format": "price",
+    "term": "take_profit",
+    "note": "TP1; Excel đã chia 1000"
+  },
+  {
+    "key": "take_profit_2_vnd",
+    "label": "TP2",
+    "format": "price",
+    "term": "take_profit",
+    "note": "TP; theo fallback tp_optimal/tp2 của core, không tự chọn lại"
+  },
+  {
+    "key": "trade_model_agreement_pct",
+    "label": "Model Agreement (%)",
+    "format": "pct",
+    "term": "trade_model_agreement_pct",
+    "note": "ModelAgreement%; kiểm tra có trùng Agreement hay không, không hiện hai cột như hai bằng chứng độc lập"
+  },
+  {
+    "key": "risk_pct_nav",
+    "label": "RiskPctNAV",
+    "format": "pct",
+    "term": "risk_pct_nav",
+    "note": "RiskPctNAV; cần NAV/position context, thiếu thì null"
+  },
+  {
+    "key": "commentary",
+    "label": "Nhận xét chi tiết",
+    "format": "text",
+    "term": "commentary",
+    "note": "Analysis; giữ text nguồn, gắn glossary an toàn"
+  }
+]
