@@ -291,19 +291,9 @@ def create_quant_job(body: QuantRequest, request: Request,
                      idempotency_key: str | None = Header(default=None, alias="Idempotency-Key")):
     owner = owner_or_401(request)
     symbol = symbol_or_400(body.symbol)
-    with connect() as db:
-        run = latest_run(db)
-        result = db.execute("SELECT summary_json,ohlcv_json FROM scan_results WHERE run_id=? AND symbol=?",
-                            (run["id"], symbol)).fetchone()
-        if not result:
-            raise HTTPException(404, "Mã chưa có trong bản quét")
-        summary, bars = loads(result["summary_json"], {}), loads(result["ohlcv_json"], [])
-        if summary.get("analysis_status") != "completed" or len(bars) < 30:
-            raise HTTPException(409, detail={"code": "ANALYSIS_UNAVAILABLE",
-                                             "message": summary.get("gate_explanation") or "Mã không đủ điều kiện chạy QUANT"})
     try:
         row = new_job("quant", owner, symbol,
-                      {"include_backtest": body.include_backtest, "reference_run_id": run["id"]},
+                      {"include_backtest": body.include_backtest, "data_source_mode": "crawl_data_live"},
                       idempotency_key)
     except ValueError as exc:
         status = 429 if str(exc).startswith("QUOTA_") else 409
