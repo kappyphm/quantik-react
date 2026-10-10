@@ -5,6 +5,11 @@ import {demoSnapshot} from '../market.js';
 import {demoResearch} from '../research.js';
 
 const jobs=createQuantJobs({start:startQuant,read:getJob});
+export const startQuantAnalysis=symbol=>jobs.run(symbol,null);
+export const resumeQuantAnalysis=symbol=>{
+ const {job}=jobs.snapshot(symbol);
+ return !job||job.local||job.status==='error'?jobs.run(symbol,null):Promise.resolve();
+};
 export default function useQuantJob(symbol){
  const subscribe=useCallback(fn=>jobs.subscribe(symbol,fn),[symbol]);
  const getSnapshot=useCallback(()=>jobs.snapshot(symbol),[symbol]);

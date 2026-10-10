@@ -1,0 +1,74 @@
+/* Dashboard motion. Brand colors and exact financial values stay intact. */
+:root{--motion-ease:cubic-bezier(.22,1,.36,1);--motion-fast:160ms;--motion-panel:280ms}
+
+/* Collapsed drawers remain mounted; inert removes hidden controls from tab order. */
+.chart-split:not(.analysis-open)>.analysis-drawer{width:0;margin-left:0;border-width:0;opacity:0;visibility:hidden;pointer-events:none;overflow:hidden}
+.analysis-drawer .drawer-header,.analysis-drawer .drawer-body{min-width:calc(var(--analysis-width) - 2px)}
+.motion-module-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.motion-chain-summary{display:flex;gap:12px;align-items:flex-start;width:100%}
+.synthesis-chain summary>.motion-chain-summary{color:var(--text);font:inherit}
+.motion-chain-summary>span{color:var(--amber);font-size:12px}
+.quant-module>summary,.synthesis-chain summary{list-style:none;position:relative;padding-right:23px}
+.quant-module>summary::-webkit-details-marker,.synthesis-chain summary::-webkit-details-marker{display:none}
+.quant-module>summary:after,.synthesis-chain summary:after{content:'';position:absolute;right:3px;top:8px;width:6px;height:6px;border-right:1.5px solid var(--dim);border-bottom:1.5px solid var(--dim);transform:rotate(45deg)}
+.quant-module[open]>summary:after,.synthesis-chain details[open]>summary:after{transform:rotate(225deg)}
+.motion-details-animating{overflow:hidden}
+.drawer-body .motion-module-summary{align-items:flex-start;flex-direction:column}
+.quant-progress-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;margin:20px 0;list-style:none}
+.quant-progress-steps li{padding:13px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--faint);display:flex;flex-direction:column;gap:10px;min-width:0}
+.quant-progress-steps li>span{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--line);border-radius:50%;font-size:10px}
+.quant-progress-steps b{font:500 11px/1.5 system-ui,sans-serif}
+.quant-progress-steps .complete{color:var(--up)}.quant-progress-steps .complete>span{border-color:var(--up);background:color-mix(in srgb,var(--up) 10%,transparent)}
+.quant-progress-steps .current{color:var(--text);border-color:color-mix(in srgb,var(--amber) 55%,var(--line));background:var(--amber-soft)}
+.quant-progress-steps .current>span{border-color:var(--amber);color:var(--amber)}
+.drawer-body .quant-progress-steps{grid-template-columns:1fr 1fr}
+
+/* Depth is static while reading; only purposeful changes animate. */
+html[data-motion=on] :is(.metric,.market-panel,.detail-window,.leaders-window,.guide-card,.research-card,.quant-module,.quant-synthesis,.scan-gate,.scan-table-panel){border-radius:12px;box-shadow:0 10px 30px #00000014,inset 0 1px #ffffff06}
+html[data-motion=on] :is(button,.metric,.guide-card,.research-card,.quant-module,.synthesis-chain details){transition:transform var(--motion-fast) var(--motion-ease),background-color var(--motion-fast) ease,border-color var(--motion-fast) ease,box-shadow var(--motion-fast) ease,color var(--motion-fast) ease}
+html[data-motion=on] :is(input,select){transition:border-color var(--motion-fast) ease,box-shadow var(--motion-fast) ease}
+html[data-motion=on] :is(input,select):focus-visible{outline:2px solid color-mix(in srgb,var(--amber) 60%,transparent);outline-offset:3px}
+html[data-motion=on] :is(button,summary,a):focus-visible{outline:2px solid var(--amber);outline-offset:4px}
+html[data-motion=on] :is(.btn,.iconbtn,.quant-view-option):active:not(:disabled){transform:scale(.975)}
+html[data-motion=on] .scrim{backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);animation:motion-scrim-in 240ms ease both}
+html[data-motion=on] :is(.stock-workspace,.quant-picker){animation:motion-dialog-in 300ms var(--motion-ease) both;box-shadow:0 36px 120px #0006,inset 0 1px #ffffff0b;border-color:color-mix(in srgb,var(--up) 20%,var(--line))}
+html[data-motion=on] .stock-workspace{transition:width var(--motion-panel) var(--motion-ease),height var(--motion-panel) var(--motion-ease),border-radius var(--motion-panel) ease}
+html[data-motion=on] .scrim.motion-leaving{animation:motion-scrim-out 180ms ease both;pointer-events:none}
+html[data-motion=on] .motion-leaving :is(.stock-workspace,.quant-picker){animation:motion-dialog-out 180ms ease both}
+html[data-motion=on] .analysis-drawer{transition:width var(--motion-panel) var(--motion-ease),margin var(--motion-panel) var(--motion-ease),opacity 200ms ease,transform var(--motion-panel) var(--motion-ease),visibility 0s;transform:translateX(0);box-shadow:-12px 0 35px #00000012}
+html[data-motion=on] .chart-split:not(.analysis-open)>.analysis-drawer{transform:translateX(12px);transition:width var(--motion-panel) var(--motion-ease),margin var(--motion-panel) var(--motion-ease),opacity 160ms ease,transform var(--motion-panel) var(--motion-ease),visibility 0s var(--motion-panel)}
+html[data-motion=on] .chart-split.resizing>.analysis-drawer{transition:none}
+html[data-motion=on] .quant-view-option{background:linear-gradient(135deg,var(--panel),var(--raise));border-radius:12px}
+html[data-motion=on] :is(.quant-module>summary,.synthesis-chain summary):after{transition:transform 240ms var(--motion-ease)}
+html[data-motion=on] .quant-module[open]{border-color:color-mix(in srgb,var(--up) 35%,var(--line))}
+html[data-motion=on] .synthesis-recommendation{background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--amber) 10%,transparent),transparent 70%),var(--amber-soft);box-shadow:inset 0 1px #ffffff06;border-radius:10px}
+html[data-motion=on] .quant-result{animation:motion-content-in 320ms var(--motion-ease) both}
+html[data-motion=on] .quant-progress-steps li{transition:border-color 240ms ease,background-color 240ms ease,color 240ms ease}
+html[data-motion=on] progress::-webkit-progress-value{transition:width 300ms var(--motion-ease)}
+html[data-motion=on] .market-strip>.metric{animation:motion-content-in 380ms var(--motion-ease) backwards}
+html[data-motion=on] .market-strip>.metric:nth-child(2){animation-delay:45ms}html[data-motion=on] .market-strip>.metric:nth-child(3){animation-delay:90ms}html[data-motion=on] .market-strip>.metric:nth-child(4){animation-delay:135ms}
+@media(hover:hover) and (pointer:fine){
+ html[data-motion=on] :is(.metric,.guide-card,.research-card):hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--up) 45%,var(--line));box-shadow:0 16px 32px #00000024,inset 0 1px #ffffff0c}
+ html[data-motion=on] :is(.btn,.iconbtn,.quant-view-option):hover:not(:disabled){box-shadow:0 5px 20px color-mix(in srgb,var(--amber) 12%,transparent);border-color:color-mix(in srgb,var(--amber) 65%,var(--line))}
+ html[data-motion=on] .quant-view-option:hover{transform:translateY(-2px)}
+ html[data-motion=on] .quant-module:hover{border-color:color-mix(in srgb,var(--up) 35%,var(--line))}
+}
+@keyframes motion-content-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes motion-dialog-in{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes motion-dialog-out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(6px) scale(.985)}}
+@keyframes motion-scrim-in{from{opacity:0}to{opacity:1}}
+@keyframes motion-scrim-out{from{opacity:1}to{opacity:0}}
+@media(max-width:1000px){
+ .analysis-drawer{min-height:0}
+ .analysis-drawer .drawer-header,.analysis-drawer .drawer-body{min-width:0}
+ .chart-split:not(.analysis-open)>.analysis-drawer{width:100%;height:0;min-height:0;margin:0;border-width:0}
+ html[data-motion=on] .analysis-drawer,html[data-motion=on] .chart-split:not(.analysis-open)>.analysis-drawer{transition:height var(--motion-panel) var(--motion-ease),margin var(--motion-panel) var(--motion-ease),opacity 200ms ease,transform var(--motion-panel) var(--motion-ease),visibility 0s;transform:translateY(0)}
+ html[data-motion=on] .chart-split:not(.analysis-open)>.analysis-drawer{transform:translateY(8px);transition-delay:0s,0s,0s,0s,var(--motion-panel)}
+}
+@media(prefers-reduced-motion:reduce){html[data-motion=on] *{animation:none!important;transition:none!important}html[data-motion=on] .scrim{backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+.quant-action{border-left:3px solid var(--amber);background:linear-gradient(130deg,var(--panel),color-mix(in srgb,var(--amber) 5%,var(--panel)))}
+.quant-action h3{font:600 16px/1.5 system-ui,sans-serif;letter-spacing:1px;margin:0 0 14px;color:var(--amber)}
+.quant-action p{font:14px/1.9 system-ui,sans-serif;color:var(--text);margin:0;max-width:100ch}
+.drawer-body .quant-action p{font-size:13px;line-height:1.85}
+@media(max-width:600px){.quant-progress-steps{grid-template-columns:1fr 1fr}}
