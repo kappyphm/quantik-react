@@ -1,28 +1,25 @@
 import {useId} from 'react';
-import {displayResult,flattenResult,moduleStatusLabels} from '../quant-modules.js';
+import {displayResult,moduleStatusLabels} from '../quant-modules.js';
 import AnnotatedText from './AnnotatedText.jsx';
 
 export default function QuantModules({modules,expanded=false}) {
-  const uid=useId();
-  if(!modules?.length)return null;
-  return <section className="quant-modules" aria-label="Phân tích từng module">
-    <div className="report-heading"><h3>Từng model · Nguồn gốc và ý nghĩa</h3><p>Mở module để xem đầu vào, cách tính, bằng chứng và giới hạn của nhận định.</p></div>
-    {expanded&&<nav className="quant-module-nav" aria-label="Điều hướng module">{modules.map(m=><a key={m.id} href={`#${uid}-${m.id}`}>{m.title}</a>)}</nav>}
-    <div className="quant-module-list">{modules.map(m=>{
-      const rows=flattenResult(m.result||{});
-      return <details className="quant-module card" key={m.id} id={`${uid}-${m.id}`} open={expanded||undefined}>
-        <summary><b>{m.title}</b><span className={`module-status status-${m.status}`}>{moduleStatusLabels[m.status]||'Chưa xác nhận'}</span></summary>
-        <div className="module-body"><p className="module-input"><b>Đầu vào:</b> {m.inputs}</p>
-          <div className="module-explanation"><h4>Vì sao có kết quả này?</h4><p><AnnotatedText text={m.explanation}/></p></div>
-          <div className="module-method"><h4>Cách tính / phương pháp</h4><p>{m.method}</p></div>
-          {!!m.evidence?.length&&<div className="module-evidence"><h4>Bằng chứng từ dữ liệu</h4><dl>{m.evidence.map((p,i)=><div key={i}><dt>{p.label}</dt><dd>{displayResult(p.value)} {p.unit}</dd></div>)}</dl></div>}
-          <p className="module-limit"><b>Điều kiện diễn giải:</b> {m.limitations}</p>
-          <details className="module-values"><summary>Kết quả và chẩn đoán chi tiết ({rows.length})</summary>{rows.length?<div className="boardwrap"><table><thead><tr><th>Trường kết quả</th><th>Giá trị</th></tr></thead><tbody>{rows.slice(0,80).map((row,i)=><tr key={i}><td>{row.key}</td><td>{displayResult(row.value)}</td></tr>)}</tbody></table></div>:<p>Module chưa trả kết quả.</p>}
-            {rows.length>80&&<p>Hiển thị 80 trường đầu; xem toàn bộ kết quả bên dưới.</p>}
-            <details><summary>Xem toàn bộ kết quả gốc của module</summary><pre>{JSON.stringify(m.result||{},null,2)}</pre></details>
-          </details>
-        </div>
-      </details>;
-    })}</div>
-  </section>;
+ const uid=useId();
+ if(!modules?.length)return null;
+ return <section className="quant-modules" aria-label="Phân tích từng module">
+  <div className="report-heading"><h3>Hiểu từng mô hình và kết quả</h3><p>Từ dữ liệu đầu vào đến ý nghĩa kết quả, nguyên nhân và vai trò trong khuyến nghị tổng hợp.</p></div>
+  {expanded&&<nav className="quant-module-nav" aria-label="Điều hướng module">{modules.map(m=><a key={m.id} href={`#${uid}-${m.id}`}>{m.title}</a>)}</nav>}
+  <div className="quant-module-list">{modules.map(m=><details className="quant-module card" key={m.id} id={`${uid}-${m.id}`} open={expanded||undefined}>
+   <summary><b>{m.title}</b><span className={`module-status status-${m.status}`}>{moduleStatusLabels[m.status]||'Chưa xác nhận'}</span></summary>
+   <div className="module-body">
+    <div className="module-guide"><h4>1. Đây là gì, dùng để hiểu điều gì?</h4><p><AnnotatedText text={m.definition||'Chưa có phần giải thích được xác nhận cho báo cáo này.'}/></p></div>
+    <div className="module-guide"><h4>2. Đầu vào và điều kiện để sử dụng</h4><p><AnnotatedText text={m.conditions||m.inputs||'Chưa có điều kiện đầu vào được xác nhận.'}/></p></div>
+    <div className="module-explanation"><h4>3. Kết quả đang nói điều gì?</h4><p><AnnotatedText text={m.reading||'Báo cáo cũ chưa có diễn giải kết quả; hãy chạy lại phân tích để xem nội dung đầy đủ.'}/></p>
+     {!!m.metrics?.length&&<dl className="module-reader-metrics">{m.metrics.map((p,i)=><div key={i}><dt>{p.label}</dt><dd>{displayResult(p.value)} {p.unit}</dd></div>)}</dl>}
+    </div>
+    <div className="module-guide"><h4>4. Vì sao xuất hiện kết quả này?</h4><p><AnnotatedText text={m.why||m.method||'Chưa có cơ chế được xác nhận.'}/></p></div>
+    {!!m.evidence?.length&&<div className="module-evidence"><h4>Đối chiếu trực tiếp với dữ liệu</h4><dl>{m.evidence.map((p,i)=><div key={i}><dt>{p.label}</dt><dd>{displayResult(p.value)} {p.unit}</dd></div>)}</dl></div>}
+    <div className="module-limit"><h4>5. Ghép với mô hình khác và dùng trong quyết định</h4><p><AnnotatedText text={m.connection||m.limitations||'Kết quả cần được đọc trong bối cảnh toàn bộ báo cáo.'}/></p></div>
+   </div>
+  </details>)}</div>
+ </section>;
 }
