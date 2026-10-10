@@ -16,8 +16,9 @@ from pathlib import Path
 from runtime_env import load_project_env
 
 load_project_env()
-from engine import quant_from_snapshot, scan_all
+from engine import quant_from_crawl, quant_from_snapshot, scan_all
 from backtest_service import recommendation_backtest
+from quant_narrative import narrative, synthesize
 from store import (claim_job, connect, dumps, heartbeat_job, heartbeat_service,
                    init_db, loads, now, update_job)
 
@@ -144,21 +145,26 @@ def run_quant(job):
         update_job(job["id"], phase, pct, message)
 
     current_run = params.get("reference_run_id")
-    if not current_run or current_run.startswith("DEMO-"):
-        raise RuntimeError("Job không tham chiếu bản quét production")
-    with connect() as db:
-        snapshot = db.execute("""SELECT s.summary_json,s.ohlcv_json,r.index_json
-                                 FROM scan_results s JOIN scan_runs r ON r.id=s.run_id
-                                 WHERE s.run_id=? AND s.symbol=? AND r.status='published'
-                                 AND r.id NOT LIKE 'DEMO-%'""", (current_run, symbol)).fetchone()
-    if not snapshot:
-        raise RuntimeError("Snapshot đã công bố không còn khả dụng")
-    summary = loads(snapshot["summary_json"], {})
-    current_bars = loads(snapshot["ohlcv_json"], [])
-    report, visuals, current_bars = quant_from_snapshot(
-        symbol, current_bars, loads(snapshot["index_json"], []),
-        summary.get("exchange", "UNKNOWN"), progress, output_dir,
-        params.get("include_backtest", True))
+    if params.get("data_source_mode") == "crawl_data_live":
+        report, visuals, current_bars = quant_from_crawl(
+            symbol, progress, output_dir, params.get("include_backtest", True))
+    else:
+        # Old durable jobs retain the snapshot contract they were queued with.
+        if not current_run or current_run.startswith("DEMO-"):
+            raise RuntimeError("Job cũ không tham chiếu bản quét production")
+        with connect() as db:
+            snapshot = db.execute("""SELECT s.summary_json,s.ohlcv_json,r.index_json
+                                     FROM scan_results s JOIN scan_runs r ON r.id=s.run_id
+                                     WHERE s.run_id=? AND s.symbol=? AND r.status='published'
+                                     AND r.id NOT LIKE 'DEMO-%'""", (current_run, symbol)).fetchone()
+        if not snapshot:
+            raise RuntimeError("Snapshot đã công bố không còn khả dụng")
+        summary = loads(snapshot["summary_json"], {})
+        current_bars = loads(snapshot["ohlcv_json"], [])
+        report, visuals, current_bars = quant_from_snapshot(
+            symbol, current_bars, loads(snapshot["index_json"], []),
+            summary.get("exchange", "UNKNOWN"), progress, output_dir,
+            params.get("include_backtest", True))
     report["analysis_mode"] = "quant_core"
     report["job_id"] = job["id"]
     report["reference_run_id"] = current_run
@@ -179,6 +185,19 @@ def run_quant(job):
         report["backtest"] = recommendation_backtest(symbol, current_bars)
     else:
         report["backtest"] = {"status": "skipped", "reason": "Người dùng không yêu cầu kiểm định lịch sử."}
+    backtest_status = "computed" if report["backtest"].get("status") == "completed" else "unavailable"
+    import pandas as pd
+    backtest_detail = narrative("backtest", report["backtest"], pd.DataFrame(), backtest_status)
+    report.setdefault("module_reports", []).append({
+        "id": "backtest", "title": "Kiểm định · Backtest point-in-time",
+        "status": "computed" if report["backtest"].get("status") == "completed" else "unavailable",
+        "inputs": "Tín hiệu MUA đã công bố và lịch sử OHLCV, bổ sung dữ liệu của lần phân tích này",
+        "method": "Mua tại đóng cửa phiên sau tín hiệu đã công bố, thoát sau số phiên cấu hình và trừ chi phí khứ hồi; chỉ xét giao dịch đủ horizon.",
+        "explanation": report["backtest"].get("reason") or "Kết quả bên dưới xuất phát từ mô phỏng quy tắc trên dữ liệu lịch sử; xem cấu hình, số giao dịch và chi phí trước khi diễn giải.",
+        "limitations": "Kết quả lịch sử không bảo đảm hiệu quả tương lai; phân biệt backtest chiến lược với thống kê giá.",
+        "result": report["backtest"], **backtest_detail,
+    })
+    report["synthesis"] = synthesize(report["module_reports"])
     update_job(job["id"], "done", 100, "Đã hoàn tất báo cáo", status="succeeded", report=report)
 
 
