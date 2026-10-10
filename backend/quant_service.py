@@ -5,6 +5,7 @@ from datetime import date
 from functools import lru_cache
 
 import numpy as np
+from quant_explanations import module_reports
 
 
 
@@ -108,6 +109,11 @@ def present_report(report: dict, prices) -> dict:
         'riskMetrics': [{'id':key,'label':label,'value':value,'unit':'%'} for key,label,value in risk_values if _number(value) is not None],
     }
     return _json({
+        'module_reports': module_reports(report, prices),
+        'flow': report.get('flow', {}),
+        'trend': report.get('trend', {}),
+        'data_lineage': {'observations': len(prices), 'start': dates[0], 'end': dates[-1],
+                         'interval': '1D', 'price_unit': 'VND'},
         'research': research,
         'symbol': symbol, 'as_of': dates[-1],
         'score': report.get('rec', {}).get('score'),
