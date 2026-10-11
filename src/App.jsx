@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PriceBoard from './components/PriceBoard.jsx';
+import HomePage from './components/HomePage.jsx';
 import StockModal from './components/StockModal.jsx';
 import QuantPage from './components/QuantPage.jsx';
 import QuantViewPicker from './components/QuantViewPicker.jsx';
@@ -8,7 +9,7 @@ import NavIcon from './components/NavIcon.jsx';
 import ScanPage from './components/ScanPage.jsx';
 import {motionEnabled} from './motion.js';
 
-const pages = [['market','◫','Thị trường'],['board','▦','Bảng điện'],['sectors','◈','Nhóm ngành'],['scan','⌕','Quét toàn sàn'],['watch','☆','Theo dõi'],['quant','⌁','Phân tích Quant'],['guide','?','Hướng dẫn']];
+const pages = [['home','⌂','Trang chủ'],['market','◫','Thị trường'],['board','▦','Bảng điện'],['sectors','◈','Nhóm ngành'],['scan','⌕','Quét toàn sàn'],['watch','☆','Theo dõi'],['quant','⌁','Phân tích Quant'],['guide','?','Hướng dẫn']];
 export default function App() {
   const [open,setOpen] = useState(null);
   const main=useRef(null);
@@ -16,7 +17,7 @@ export default function App() {
   const [quantRequest,setQuantRequest] = useState(null);
   const requestQuant=useCallback((sym,scan)=>setQuantRequest({sym,scan}),[]);
   const closeQuantPicker=useCallback(()=>setQuantRequest(null),[]);
-  const [section,setSection] = useState('market');
+  const [section,setSection] = useState('home');
   useEffect(()=>{if(!main.current||!motionEnabled()||!main.current.animate)return;const animation=main.current.animate([{opacity:.5,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:300,easing:'cubic-bezier(.22,1,.36,1)'});return()=>animation.cancel();},[section]);
   const [command,setCommand] = useState('');
   const [notice,setNotice] = useState('');
@@ -47,8 +48,9 @@ export default function App() {
   };
   const title=pages.find(p=>p[0]===section)[2];
   const subtitle={market:'Theo dõi biến động. Tìm tín hiệu. Khám phá cơ hội.',board:'Bảng điện nhiều mức giá, thanh khoản và dữ liệu theo sàn.',sectors:'So sánh các nhóm ngành trong tập dữ liệu đang xem.',scan:'Mở kết quả từ đợt phân tích đã công bố.',watch:'Tập trung vào những doanh nghiệp bạn quan tâm.',quant:'Khám phá xu hướng, dòng tiền và rủi ro theo từng mô hình.',guide:'Bắt đầu hành trình đầu tư cùng dữ liệu.'}[section];
+  if(section==='home')return <HomePage onNavigate={setSection} onInspect={sym=>{startQuantAnalysis(sym);showQuantPage(sym);}}/>;
   return <div className={`app-shell ${section==='quant'?'quant-focused':''}`}>
-    <aside className="sidebar"><a href="#" className="brand" onClick={e=>{e.preventDefault();setSection('market');}}><img className="brand-logo" src="/quantik-logo.jpg" alt="QuanTik" width="200" height="200"/></a><div className="nav-label">KHÔNG GIAN ĐẦU TƯ</div><nav aria-label="Điều hướng chính">{pages.map(([id,icon,label])=><button key={id} className={section===id?'active':''} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}><span aria-hidden="true"><NavIcon id={id}/></span>{label}{section===id&&<i/>}</button>)}</nav><div className="sidebar-bottom"><div className="demo-card"><span className="eyebrow">BẢN TRẢI NGHIỆM</span><b>Hiểu dữ liệu.<br/>Chủ động quyết định.</b><p>Khám phá công cụ phân tích định lượng cho cổ phiếu Việt Nam.</p><button onClick={()=>setSection('guide')}>Khám phá QuanTik ↗</button></div><div className="profile"><span>QT</span><div>Không gian cá nhân<small>Lưu theo dõi trên thiết bị</small></div></div></div></aside>
+    <aside className="sidebar"><a href="#" className="brand" onClick={e=>{e.preventDefault();setSection('home');}}><img className="brand-logo" src="/quantik-logo.jpg" alt="QuanTik" width="200" height="200"/></a><div className="nav-label">KHÔNG GIAN ĐẦU TƯ</div><nav aria-label="Điều hướng chính">{pages.map(([id,icon,label])=><button key={id} className={section===id?'active':''} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)}><span aria-hidden="true"><NavIcon id={id}/></span>{label}{section===id&&<i/>}</button>)}</nav><div className="sidebar-bottom"><div className="demo-card"><span className="eyebrow">BẢN TRẢI NGHIỆM</span><b>Hiểu dữ liệu.<br/>Chủ động quyết định.</b><p>Khám phá công cụ phân tích định lượng cho cổ phiếu Việt Nam.</p><button onClick={()=>setSection('guide')}>Khám phá QuanTik ↗</button></div><div className="profile"><span>QT</span><div>Không gian cá nhân<small>Lưu theo dõi trên thiết bị</small></div></div></div></aside>
     <div className="workspace"><header className="topbar"><span className="breadcrumb">Không gian đầu tư <span>/</span> <b>{title}</b></span><div className="top-actions"><span className="demo-badge">Bản thử nghiệm</span><button className="iconbtn" onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} aria-label={theme==='dark'?'Chuyển chế độ sáng':'Chuyển chế độ tối'}>{theme==='dark'?'☀':'☾'}</button><img className="avatar brand-avatar" src="/quantik-logo.jpg" alt="QuanTik" width="33" height="33"/></div></header>
     <main id="main" ref={main}><div className="page-heading"><div><span className="eyebrow">VIETNAM EQUITIES / QUANTIK</span><h1>{title==='Thị trường'?'Toàn cảnh thị trường':title}</h1><p>{subtitle}</p></div><div className="session-time"><b>{clock.toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</b><span>{clock.toLocaleTimeString('en-GB',{timeZone:'Asia/Ho_Chi_Minh'})} ICT</span></div></div>
     <form className="command-line" onSubmit={execute}><label htmlFor="command">⌕ <span>Tra cứu nhanh</span></label><input ref={input} id="command" value={command} onChange={e=>setCommand(e.target.value)} placeholder="Nhập mã cổ phiếu · FPT hoặc FPT Q" autoComplete="off" spellCheck="false"/><kbd>/</kbd><button type="submit">Mở ↗</button></form>{notice&&<p role="status" className="err">{notice}</p>}
