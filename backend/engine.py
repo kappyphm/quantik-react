@@ -297,6 +297,7 @@ def _quant_with_frames(symbol, frame, index, exchange, progress, output_dir: Pat
     presentation["score_comparability_reason"] = "Job một mã không chạy lại phân phối cross-sectional toàn sàn."
     presentation["include_backtest"] = include_backtest
     presentation["data_source_mode"] = source_mode
+    progress("visual", 86, "Đang tạo dữ liệu biểu đồ từ kết quả mô hình")
     if os.getenv("QUANTIK_GENERATE_IMAGES", "false").lower() == "true":
         progress("visual", 89, "Đang tạo biểu đồ QUANT")
         visuals = generate_quant_visuals(symbol, output_dir=output_dir, formats=("png",),
@@ -304,6 +305,55 @@ def _quant_with_frames(symbol, frame, index, exchange, progress, output_dir: Pat
     else:
         visuals = {"generated": [], "skipped": {}}
     return presentation, visuals, bars_from_frame(frame)
+
+
+def quant_from_crawl(symbol, progress, output_dir: Path, include_backtest=True):
+    """Single-code search: crawl_data DataProvider -> quant.py -> exact-run visuals.
+
+    No published scan is required. Reuse the core's unit conversion and completed
+    daily-bar rules; a fetch failure never silently substitutes an old snapshot.
+    """
+    from quant_engine.crawl_data import DataProvider
+    from quant_engine.quant import ScreenerBridge, _completed_daily_bars
+
+    progress("fetch", 5, f"Đang lấy OHLCV {symbol} qua crawl_data.py")
+    provider = DataProvider(source=os.getenv("QUANTIK_CRAWL_SOURCE", "KBS"))
+    # get_ohlcv takes calendar days, not trading sessions.
+    raw = provider.get_ohlcv(symbol, days=450)
+    if raw is None or raw.empty:
+        raise RuntimeError(f"crawl_data.py không lấy được OHLCV hợp lệ cho {symbol}")
+    # Use only its normalization; this object does not fetch data again.
+    normalizer = object.__new__(ScreenerBridge)
+    frame = normalizer._normalize_ohlcv(raw.copy(), source="crawl_data.DataProvider")
+    frame = _completed_daily_bars(frame)
+    if frame is None or len(frame) < 30:
+        raise RuntimeError(f"{symbol}: cần ít nhất 30 nến ngày đã hoàn tất")
+    frame = frame.tail(252).copy()
+    progress("fetch", 15, "Đang lấy VN-Index và xác định sàn giao dịch")
+    raw_index = provider.get_index_data("VNINDEX", days=450)
+    index = normalizer._normalize_ohlcv(raw_index.copy(), source="crawl_data.DataProvider") if raw_index is not None else None
+    index = _completed_daily_bars(index)
+    if index is None or index.empty:
+        raise RuntimeError("crawl_data.py không lấy được OHLCV VN-Index hợp lệ")
+    exchange = next((name for name in ("HOSE", "HNX", "UPCOM")
+                     if symbol in provider.get_stock_list(name)), None)
+    if exchange is None:
+        raise RuntimeError(f"Không xác nhận được sàn giao dịch của {symbol}")
+    cutoff = min(frame.index.max(), index.index.max())
+    frame = frame.loc[frame.index <= cutoff].tail(252).copy()
+    index = index.loc[index.index <= cutoff].tail(252).copy()
+    if len(frame) < 30 or len(index) < 30:
+        raise RuntimeError("Không đủ lịch sử cổ phiếu/VN-Index tại cùng ngày chốt dữ liệu")
+    presentation, visuals, bars = _quant_with_frames(
+        symbol, frame, index, exchange, progress, output_dir,
+        include_backtest, "crawl_data_live")
+    presentation["data_lineage"].update({
+        "collector": "quant_engine/crawl_data.py:DataProvider",
+        "analyzer": "quant_engine/quant.py:QuantPipeline.batch",
+        "visualizer": "quant_service.present_report / quant_engine.quant_visuals",
+        "exchange": exchange, "index_end": str(index.index.max())[:10],
+    })
+    return presentation, visuals, bars
 
 
 def frame_from_bars(bars):

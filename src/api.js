@@ -99,8 +99,9 @@ function buildMetrics(report) {
   const stats = report.stats || {};
   const vol = report.vol || {};
   const ac = report.ac || {};
+  const flow = report.flow || {};
   const dist = report.dist || {};
-  const known = id => stats[id] ?? vol[id] ?? ac[id] ?? dist[id] ?? null;
+  const known = id => stats[id] ?? vol[id] ?? ac[id] ?? dist[id] ?? flow[id] ?? null;
   const metrics = [
     {id:'ensemble_return',value:report.fcast?.ensemble_ret_pct,unit:'%'},
     {id:'confidence',value:report.fcast?.agreement_pct,unit:'%'},
@@ -136,6 +137,7 @@ export const getJob = async id => {
   const out = {
     id: job.job_id || job.id, symbol: job.symbol, status,
     phase: job.phase, progress_pct: job.progress_pct,
+    phaseLabel: ({queued:'Chờ worker',fetch:'Lấy dữ liệu cổ phiếu và VN-Index',models:'Chạy các mô hình phân tích',risk:'Tổng hợp rủi ro',visual:'Tạo biểu đồ và báo cáo',done:'Hoàn tất'})[job.phase]||job.phase,
     error: job.error || null, asOf: null, mode: 'live',
     modules: [{
       id: 'quant',
@@ -155,7 +157,7 @@ export const getJob = async id => {
       const toK = v => (v == null ? null : v / 1000);
       out.summary = {
         score: numOrNull(report.score),
-        action: report.action || report.rating || null,
+        action: report.synthesis?.headline || report.action || report.rating || null,
         entry: toK(numOrNull(levels.entry)),
         stop: toK(numOrNull(levels.sl_swing)),
         tp1: toK(numOrNull(levels.tp1)),
@@ -166,7 +168,12 @@ export const getJob = async id => {
       out.research = report.research || mapBackendResearch(report);
       out.scoreComparable = report.score_comparable;
       out.scoreComparabilityReason = report.score_comparability_reason;
+      out.modelReports = report.module_reports || [];
+      out.synthesis = report.synthesis || null;
+      out.dataLineage = report.data_lineage || null;
+      out.dataSourceMode = report.data_source_mode;
       const manifest = report.chart_manifest || [];
+      out.chartManifest = manifest;
       out.imageUrl = manifest.length ? manifest[0].url : null;
       if (report.commentary) {
         out.reportSections = [{id: 'commentary', title: 'Nhận định mô hình', text: report.commentary}];

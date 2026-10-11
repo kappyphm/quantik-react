@@ -57,8 +57,8 @@ class ApiQueueTest(unittest.TestCase):
                            (now(), now(), '2026-09-22'))
                 db.execute("UPDATE publication SET run_id='NEW-TEST' WHERE key='latest'")
             fake_report = {'symbol': 'FPT', 'as_of': '2026-09-04',
-                           'data_source_mode': 'published_scan_snapshot'}
-            with patch.object(worker, 'quant_from_snapshot',
+                           'data_source_mode': 'crawl_data_live'}
+            with patch.object(worker, 'quant_from_crawl',
                               return_value=(fake_report, {'generated': [], 'skipped': {}}, [])):
                 self.assertTrue(process_one())
             job = client.get(f"/api/v1/quant/jobs/{created['job_id']}").json()
@@ -66,7 +66,7 @@ class ApiQueueTest(unittest.TestCase):
             job_date = job['requested_at'][:10]
             report = client.get(f"/api/v1/quant/reports/{created['job_id']}").json()
             self.assertEqual(report['analysis_mode'], 'quant_core')
-            self.assertEqual(report['reference_run_id'], 'FIXTURE-TEST')
+            self.assertIsNone(report['reference_run_id'])
             self.assertEqual(client.get('/api/v1/quant/jobs').json()['total'], 1)
             self.assertEqual(client.get('/api/v1/quant/jobs?symbol=FPT&status=succeeded').json()['total'], 1)
             self.assertEqual(client.get('/api/v1/quant/jobs?symbol=VCB').json()['total'], 0)
@@ -234,7 +234,7 @@ class ApiQueueTest(unittest.TestCase):
                 self.assertEqual(blocked.status_code, 429)
                 client.delete(f"/api/v1/quant/jobs/{first.json()['job_id']}")
 
-    def test_quant_job_reads_the_published_snapshot(self):
+    def test_legacy_queued_quant_job_retains_the_published_snapshot(self):
         bars = [{'time': (date(2026, 3, 1) + timedelta(days=index)).isoformat(),
                  'open': 100 + index, 'high': 102 + index, 'low': 99 + index,
                  'close': 101 + index, 'volume': 1000 + index} for index in range(35)]
@@ -250,7 +250,10 @@ class ApiQueueTest(unittest.TestCase):
         try:
             with TestClient(app) as client:
                 client.post('/api/v1/session')
-                created = client.post('/api/v1/quant/jobs', json={'symbol': 'FPT'}).json()
+                # Queue the pre-upgrade contract directly, as a durable old job.
+                owner = client.cookies.get('quantik_sid')
+                legacy = new_job('quant', owner, 'FPT', {'include_backtest': True, 'reference_run_id': 'REAL-SNAPSHOT'})
+                created = {'job_id': legacy['id']}
                 fake_report = {'symbol': 'FPT', 'as_of': bars[-1]['time'],
                                'data_source_mode': 'published_scan_snapshot'}
                 with patch.object(worker, 'quant_from_snapshot', return_value=(fake_report, {'generated': [], 'skipped': {}}, bars)) as run:
