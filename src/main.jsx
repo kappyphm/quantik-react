@@ -5,5 +5,3 @@ import './brand.css';
 import './product.css';
 
 createRoot(document.getElementById('root')).render(<App />);
-
-import './motion.css';
