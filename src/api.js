@@ -186,8 +186,8 @@ export const getJob = async id => {
 /** Backend không có khái niệm module rời: luôn trả một pipeline duy nhất. */
 export const listModules = async () => [{
   id: 'full',
-  name: 'Pipeline QUANT đầy đủ',
-  desc: 'Screener + ARIMA/GARCH/HMM/LightGBM + backtest point-in-time. Backend luôn chạy toàn pipeline.',
+  name: 'Phân tích Quant tổng hợp',
+  desc: 'Đánh giá xu hướng, dòng tiền, dự báo và rủi ro.',
 }];
 
 /** Read the last published scan; this GET never starts a quant job. */

@@ -20,11 +20,11 @@ export function createQuantJobs({start, read, delay=2000, schedule=setTimeout}) 
         for(;;){
           const job=await read(id);
           if(!['queued','running','done','error'].includes(job.status))throw Error('Trạng thái job không hợp lệ.');
-          publish(r,job,job.status==='error'?(job.error||'Pipeline báo lỗi.'):'');
+          publish(r,job,job.status==='error'?'Chưa thể hoàn tất phân tích. Vui lòng thử lại.':'');
           if(['done','error'].includes(job.status))break;
           await new Promise(resolve=>schedule(resolve,delay));
         }
-      }catch(error){publish(r,{symbol,status:'error',modules:[]},error?.status>=400&&error?.status<500?error.message:'Mất kết nối dịch vụ Quant. Bấm thử lại để nối lại job hoặc chạy phân tích.');}
+      }catch(error){publish(r,{symbol,status:'error',modules:[]},error?.status===429?'Bạn đã đạt giới hạn lượt phân tích. Vui lòng thử lại sau.':[400,404,422].includes(error?.status)?'Không thể phân tích mã này. Kiểm tra mã cổ phiếu rồi thử lại.':'Chưa thể hoàn tất phân tích. Vui lòng thử lại.');}
       finally{r.pending=null;}
     });
     return r.pending;

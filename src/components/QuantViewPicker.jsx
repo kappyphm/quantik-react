@@ -25,7 +25,7 @@ export default function QuantViewPicker({symbol,onChoose,onClose}) {
       <p>Chọn không gian xem báo cáo và từng mô hình.</p>
       <div className="quant-view-options">
         <button className="quant-view-option" onClick={()=>onChoose('sidebar')}><b>01 · Thanh bên chart</b><span>Đối chiếu biểu đồ giá với báo cáo Quant trong cửa sổ cổ phiếu.</span></button>
-        <button className="quant-view-option" onClick={()=>onChoose('page')}><b>02 · Trang toàn màn hình</b><span>Xem toàn bộ model, nguồn dữ liệu, giải thích và kết quả từng module.</span></button>
+        <button className="quant-view-option" onClick={()=>onChoose('page')}><b>02 · Trang toàn màn hình</b><span>Xem toàn bộ mô hình, giải thích và kết quả phân tích.</span></button>
       </div>
     </section>
   </div>;

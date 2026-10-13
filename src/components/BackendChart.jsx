@@ -53,7 +53,7 @@ const formatPrice = value =>
  * Biểu đồ nến + khối lượng từ OHLCV của backend (snapshot đã công bố),
  * khớp đúng dữ liệu dùng để phân tích. Không phụ thuộc nguồn ngoài.
  */
-export default function BackendChart({symbol, bars, interval = 'D', theme = 'dark', sourceLabel = 'SNAPSHOT ĐÃ CÔNG BỐ'}) {
+export default function BackendChart({symbol, bars, interval = 'D', theme = 'dark'}) {
   const host = useRef(null);
   const chartRef = useRef(null);
   const candlesRef = useRef(null);
@@ -133,7 +133,7 @@ export default function BackendChart({symbol, bars, interval = 'D', theme = 'dar
   const up = active && active.close >= active.open;
   return <div>
     <div style={{display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8}}>
-      <div><strong>{symbol}</strong> <span className="dim" style={{fontSize: 10}}>OHLCV / {sourceLabel}</span></div>
+      <div><strong>{symbol}</strong></div>
       <span style={{flex: 1}} />
       <div role="group" aria-label="Khoảng thời gian biểu đồ" style={{display: 'flex', gap: 4}}>
         {ranges.map(([label]) => (
@@ -152,7 +152,7 @@ export default function BackendChart({symbol, bars, interval = 'D', theme = 'dar
     </div>
     <div ref={host} style={{height: 420}} role="img" aria-label={`Biểu đồ nến OHLCV của ${symbol}`} />
     <p className="dim" style={{fontSize: 9, marginTop: 6}}>
-      Nến {interval === 'W' ? 'tuần' : interval === 'M' ? 'tháng' : 'ngày'} gộp từ snapshot đã công bố · Biểu đồ tạo bằng Lightweight Charts™
+      Biểu đồ tạo bằng Lightweight Charts™
     </p>
   </div>;
 }

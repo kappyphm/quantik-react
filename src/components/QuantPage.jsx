@@ -10,7 +10,6 @@ export default function QuantPage({sym,onAnalyze,onSidebar,onExit}) {
       <label htmlFor="quant-symbol">Mã cổ phiếu</label><input id="quant-symbol" value={draft} onChange={e=>setDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} maxLength={5} placeholder="VD: FPT" required pattern="[A-Z0-9]{3,5}"/>
       <button className="btn" type="submit">Phân tích Quant</button>
     </form>
-    <p className="chart-source">Lấy dữ liệu giá và khối lượng → chạy các mô hình → tạo báo cáo và biểu đồ cho mã bạn chọn.</p>
     <QuantPanel key={sym} sym={sym} expanded/>
   </section>;
 }

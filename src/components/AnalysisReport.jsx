@@ -38,8 +38,7 @@ export default function AnalysisReport({sym,job}) {
               const daily=id==='win_rate'&&(metric?.scope||job.metricScope)==='DAILY_PRICE_RETURNS_NOT_TRADES';
               return <span key={id}>{i>0?' · ':''}<TermHint id={daily?'up_day_ratio':id} parameters={metric?.parameters} methodId={metric?.methodId}>{daily?'Tỷ lệ phiên tăng':id==='hmm'?'HMM':term?.en||id}</TermHint>{' '}<strong>{formatMetric(metric)}</strong></span>;
             })}</p>
-            {section.id==='signals'&&<p className="dim"><TermHint id="quant_factor">Quant Factor</TermHint> và kết quả <TermHint id="hmm">HMM</TermHint> sẽ lấy từ pipeline của mã {sym}.</p>}
-            {!metrics.some(m=>(section.metrics||[]).includes(m.id)&&m.value!=null)&&<p className="report-pending">Chưa có kết quả tính toán cho mục này. Công thức chỉ xuất hiện trong popup của thuật ngữ.</p>}
+            {!metrics.some(m=>(section.metrics||[]).includes(m.id)&&m.value!=null)&&<p className="report-pending">Chưa có kết quả cho mục này.</p>}
           </>}
         </div>
       </article>;

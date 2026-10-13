@@ -44,12 +44,11 @@ export default function ScanPage({onOpen,onQuant}) {
     {!snapshot ? <div className="scan-gate">
       <div className="scan-gate-copy"><span className="scan-tag"><i/> PHÂN TÍCH TOÀN THỊ TRƯỜNG</span>
         <h2>Khai mở góc nhìn<br/><em>toàn sàn.</em></h2>
-        <p>Mở bản công bố từ đợt phân tích gần nhất. Kích hoạt để xem 5 mã nổi bật, 5 mã cần thận trọng và các tỷ suất đánh giá.</p>
+        <p>Khám phá 5 mã nổi bật, 5 mã cần thận trọng và các chỉ số đánh giá.</p>
         <button className="btn scan-activate" onClick={load} disabled={busy}>{busy ? 'Đang lấy kết quả…' : 'Kích hoạt kết quả'} <span aria-hidden="true">↗</span></button>
-        <small>Đọc bản công bố có sẵn · Lịch cập nhật theo pipeline</small>
       </div>
       <div className="scan-gate-art"><ScanArtwork/><span>KHÔNG CÓ NGÀY MAI,<br/>CHỈ CÓ <b>XÁC SUẤT.</b></span></div>
-      <div className="scan-gate-features"><div><b>01 / TOÀN THỊ TRƯỜNG</b><span>Tổng hợp theo sàn và doanh nghiệp</span></div><div><b>02 / BẢN CÔNG BỐ</b><span>Xem thời điểm dữ liệu và phiên phân tích</span></div><div><b>03 / TỪNG CỔ PHIẾU</b><span>Mở chi tiết đánh giá cho mã bạn chọn</span></div></div>
+      <div className="scan-gate-features"><div><b>01 / TOÀN THỊ TRƯỜNG</b><span>Tổng hợp theo sàn và doanh nghiệp</span></div><div><b>02 / CƠ HỘI & RỦI RO</b><span>So sánh các mã nổi bật và cần thận trọng</span></div><div><b>03 / TỪNG CỔ PHIẾU</b><span>Mở chi tiết đánh giá cho mã bạn chọn</span></div></div>
     </div> : <ScanHighlights snapshot={snapshot} heading={heading} onOpen={onOpen} onQuant={onQuant} onRefresh={load} busy={busy}/> }
     {error && <div className="scan-error"><p role="alert">{error}</p>{!snapshot && <button className="btn ghost" disabled={busy} onClick={()=>{setSnapshot(demoScan());setError('');requestAnimationFrame(()=>heading.current?.focus());}}>Xem bản mẫu minh họa</button>}</div>}
   </section>;
