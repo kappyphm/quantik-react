@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import {instrumentFor} from '../market.js';
-import {advancedChartConfig} from '../chart-settings.js';
+import {advancedChartConfig,resolveTradingViewSymbol} from '../chart-settings.js';
 
 const BASE = 'https://s3.tradingview.com/external-embedding/';
 
@@ -38,7 +38,7 @@ function TVWidget({ name, config }) {
 export default memo(TVWidget);
 
 const common = (theme) => ({ locale: 'vi_VN', colorTheme: theme, theme, isTransparent: true, width: '100%' });
-export const tvSymbol = (sym) => instrumentFor(sym)?.tvSymbol || null;
+export const tvSymbol = (sym,exchange) => resolveTradingViewSymbol(sym,instrumentFor(sym),exchange);
 
 export const AdvancedChart = ({ sym, symbol, theme, compact, interval = 'D', indicators }) => (
   (symbol || tvSymbol(sym)) ? <TVWidget

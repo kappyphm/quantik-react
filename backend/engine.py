@@ -9,7 +9,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
-from quant_service import present_report
+from quant_service import present_report, present_screened_report
 from scan_presentation import fields_from_summary
 
 
@@ -287,6 +287,12 @@ def _quant_with_frames(symbol, frame, index, exchange, progress, output_dir: Pat
     progress("models", 35, "Đang chạy các mô hình định lượng")
     pipeline = QuantPipeline()
     report = pipeline.batch({symbol: frame}, idx_df=index, exchange_map={symbol: exchange})[0]
+    if report.get("error") == "Liquidity gate failed" and report.get("liquidity", {}).get("pass") is False:
+        progress("risk", 75, "Đã đánh giá điều kiện thanh khoản")
+        presentation = present_screened_report(report, frame)
+        presentation.update({"score_comparable": False, "include_backtest": False,
+                             "data_source_mode": source_mode})
+        return presentation, {"generated": [], "skipped": {}}, bars_from_frame(frame)
     if report.get("error"):
         raise RuntimeError(report["error"])
     progress("risk", 75, "Đang tổng hợp rủi ro và báo cáo")

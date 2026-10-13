@@ -68,7 +68,7 @@ export function normalizeLiveBoard(pages, scanBySymbol) {
         symbol, name: scan.name || symbol, exchange,
         sectorId: scan.sector || 'unknown', active: true,
       };
-      if (exchange === 'HOSE') inst.tvSymbol = `HOSE:${symbol}`;
+      if (['HOSE','HNX','UPCOM'].includes(String(exchange).toUpperCase())) inst.tvSymbol = `${String(exchange).toUpperCase()}:${symbol}`;
       insts.push(inst);
       quotes.push({
         symbol, ref,

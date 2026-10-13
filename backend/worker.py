@@ -181,7 +181,9 @@ def run_quant(job):
             report["chart_manifest"].append({"id": artifact_id, "kind": path.stem,
                                               "url": f"/api/v1/quant/reports/{job['id']}/artifacts/{artifact_id}"})
     report["visual_errors"] = visuals.get("skipped", {})
-    if params.get("include_backtest"):
+    if report.get("analysis_status") == "screened_out":
+        report["backtest"] = {"status": "skipped", "reason": "Thanh khoản chưa đạt điều kiện; không tạo phương án giao dịch."}
+    elif params.get("include_backtest"):
         report["backtest"] = recommendation_backtest(symbol, current_bars)
     else:
         report["backtest"] = {"status": "skipped", "reason": "Người dùng không yêu cầu kiểm định lịch sử."}

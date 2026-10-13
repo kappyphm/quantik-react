@@ -24,6 +24,7 @@ from runtime_env import load_project_env
 from store import (connect, create_scan, heartbeat_service, init_db, loads, new_job,
                    new_session, session_exists, now)
 from market import overview as live_market_overview
+from market import instrument as market_instrument
 
 load_project_env()
 log = logging.getLogger("quantik.api")
@@ -38,7 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-SYMBOL_RE = re.compile(r"^[A-Z]{3,5}$")
+SYMBOL_RE = re.compile(r"^[A-Z][A-Z0-9]{2,4}$")
 SORT_FIELDS = {"symbol", "recommendation", "gate_pass", "gate_explanation", "score", "rating",
                "hold_plan", "vni_trend", "sector", "sector_trend", "exchange"}
 COOKIE_SECURE = os.getenv("QUANTIK_COOKIE_SECURE", "false").lower() == "true"
@@ -279,6 +280,20 @@ def market_overview(page: int = 1, page_size: int = 5):
         log.exception("market_source_failed")
         raise HTTPException(503, detail={"code": "MARKET_SOURCE_UNAVAILABLE",
                                          "message": "Nguồn bảng giá tạm thời không sẵn sàng"})
+
+
+@app.get("/api/v1/market/symbols/{symbol}")
+def market_symbol(symbol: str):
+    symbol = symbol_or_400(symbol)
+    try:
+        result = market_instrument(symbol)
+    except Exception:
+        log.exception("market_instrument_failed")
+        raise HTTPException(503, detail={"code": "MARKET_SOURCE_UNAVAILABLE",
+                                         "message": "Chưa tải được thông tin mã cổ phiếu"})
+    if result is None:
+        raise HTTPException(404, detail={"code": "SYMBOL_NOT_LISTED", "message": "Không tìm thấy mã cổ phiếu"})
+    return result
 
 
 class QuantRequest(BaseModel):

@@ -14,6 +14,9 @@ _lock = threading.Lock()
 _listing = (0.0, [])
 _index = (0.0, [])
 _pages = {}
+_exchanges = {}
+_exchanges_at = 0.0
+QUOTE_CACHE_SECONDS = 30
 
 
 def _number(value):
@@ -75,12 +78,29 @@ def _index_bars():
     return _index[1]
 
 
+def instrument(symbol: str) -> dict | None:
+    """Resolve a listed venue even when this symbol has no published quant report."""
+    global _exchanges, _exchanges_at
+    with _lock:
+        if time.monotonic() - _exchanges_at >= 6 * 3600 or not _exchanges:
+            provider = DataProvider()
+            venues = {}
+            for exchange in ('HOSE', 'HNX', 'UPCOM'):
+                for ticker in provider.get_stock_list(exchange):
+                    venues.setdefault(str(ticker).strip().upper(), exchange)
+            if not venues:
+                raise RuntimeError('Không lấy được danh mục sàn giao dịch')
+            _exchanges, _exchanges_at = venues, time.monotonic()
+        exchange = _exchanges.get(symbol)
+        return {'symbol': symbol, 'exchange': exchange, 'tv_symbol': f'{exchange}:{symbol}'} if exchange else None
+
+
 def overview(page: int, page_size: int) -> dict:
     """Fetch current quotes for the requested page; never substitute fixture prices."""
     key = (page, page_size)
     with _lock:
         cached = _pages.get(key)
-        if cached and time.monotonic() - cached[0] < 60:
+        if cached and time.monotonic() - cached[0] < QUOTE_CACHE_SECONDS:
             return cached[1]
         symbols = _symbols()
         page_symbols = symbols[(page - 1) * page_size:page * page_size]

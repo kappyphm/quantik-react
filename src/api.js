@@ -56,9 +56,12 @@ async function fetchScanItems(signal) {
 
 /** Full provider catalog; scan metadata is optional and never blocks the board. */
 const BOARD_PAGE_SIZE = 50;
+let boardScanCache=null;
 export const getBoard = async (group = 'ALL', signal) => {
   void group;
-  const scanPromise = fetchScanItems(signal).catch(() => {
+  const scanPromise = boardScanCache&&Date.now()-boardScanCache.time<300000
+    ? Promise.resolve(boardScanCache.items)
+    : fetchScanItems(signal).then(items=>{boardScanCache={items,time:Date.now()};return items;}).catch(() => {
     return []; // optional metadata; market request owns cancellation
   });
   const first = await v1get(`/market/overview?page=1&page_size=${BOARD_PAGE_SIZE}`, signal);
@@ -169,6 +172,8 @@ export const getJob = async id => {
       out.scoreComparable = report.score_comparable;
       out.scoreComparabilityReason = report.score_comparability_reason;
       out.modelReports = report.module_reports || [];
+      out.analysisStatus = report.analysis_status;
+      out.analysisOutcome = report.analysis_outcome;
       out.synthesis = report.synthesis || null;
       out.dataLineage = report.data_lineage || null;
       out.dataSourceMode = report.data_source_mode;
@@ -198,8 +203,18 @@ export const getLatestScan = async signal => {
 };
 
 /** Chi tiết 1 mã trong bản quét đã công bố (public, không cần session). */
-export const getSymbolDetail = (symbol, signal) =>
-  v1get(`/scans/latest/results/${encodeURIComponent(String(symbol).toUpperCase())}`, signal);
+export const getSymbolDetail = async (symbol, signal) => {
+  const ticker=encodeURIComponent(String(symbol).toUpperCase());
+  let detail;
+  try {
+    detail=await v1get(`/scans/latest/results/${ticker}`, signal);
+    if(['HOSE','HNX','UPCOM'].includes(String(detail.exchange).toUpperCase()))return detail;
+  } catch(error) {
+    if(error.name==='AbortError'||signal?.aborted)throw error;
+  }
+  const instrument=await v1get(`/market/symbols/${ticker}`,signal);
+  return {...detail,...instrument};
+};
 
 /** Nến OHLCV của 1 mã từ snapshot đã công bố (public, tối đa 260 phiên). */
 export const getSymbolOhlcv = (symbol, limit = 260, signal) =>

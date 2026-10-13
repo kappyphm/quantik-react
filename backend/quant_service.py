@@ -46,9 +46,30 @@ def analyze_symbol(symbol: str, session: str | None = None) -> dict:
     index = bridge.fetch_index('VNINDEX', days=252)
     exchange = bridge.fetch_exchange_map([symbol])
     report = QuantPipeline().batch(data, idx_df=index, exchange_map=exchange)[0]
+    if report.get('error') == 'Liquidity gate failed' and report.get('liquidity', {}).get('pass') is False:
+        return present_screened_report(report, data[symbol])
     if report.get('error'):
         raise ValueError(report['error'])
     return present_report(report, data[symbol])
+
+
+def present_screened_report(report: dict, prices) -> dict:
+    """A measured liquidity rejection is an analysis result, not a worker crash."""
+    if report.get('liquidity', {}).get('pass') is not False:
+        raise ValueError('Liquidity rejection requires a measured failed gate')
+    blocked = {**report, 'action': {'action': 'AVOID', 'gate_pass': False,
+                                   'executable': False, 'reason_codes': ['LIQUIDITY_FAIL']}}
+    presentation = present_report(blocked, prices)
+    modules = [m for m in presentation['module_reports'] if m['id'] in ('data_quality', 'liquidity', 'action')]
+    presentation.update({
+        'analysis_status': 'screened_out',
+        'analysis_outcome': {'code': 'LIQUIDITY_FAIL', 'title': 'Thanh khoản chưa đạt điều kiện',
+                             'message': 'Mã này chưa đạt điều kiện thanh khoản để đánh giá cơ hội giao dịch. Xem giá trị giao dịch và giới hạn thanh khoản bên dưới.'},
+        'action': 'AVOID', 'score': None, 'rating': None,
+        'module_reports': modules, 'synthesis': synthesize(modules),
+        'liquidity': _json(report['liquidity']),
+    })
+    return presentation
 
 
 def present_report(report: dict, prices) -> dict:
